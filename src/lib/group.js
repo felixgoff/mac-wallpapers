@@ -1,18 +1,24 @@
 import { VLABEL, VORDER, section } from './versions.js';
 
+// Apple's "Dynamic" aerial category doubles as System Settings' Dynamic Wallpapers: every light/dark wallpaper
+export const DYNAMIC = 'dynamic-aerials';
+export const inCategory = (d, cat) => cat === 'all' || d.c === cat || (cat === DYNAMIC && !!d.dyn);
+
 // The wallpapers shown for a category and search, in display order
 export function visibleItems(items, { cat, q, sortBy, catName }) {
   q = q.trim().toLowerCase();
-  const list = items.filter(d => (cat === 'all' || d.c === cat) &&
+  const list = items.filter(d => inCategory(d, cat) &&
     (!q || `${d.n} ${section(d)} ${catName(d.c)} ${VLABEL[d.v]}`.toLowerCase().includes(q)));
-  // Archive items sort by release even when grouping by category (they come last in the data)
-  return list.sort((a, b) => sortBy === 'version' || (a.c === 'archive' && b.c === 'archive')
+  // Archive items sort by release even when grouping by category (they come last in the data);
+  // Dynamic lists newest release first, like System Settings
+  return list.sort((a, b) => sortBy === 'version' || cat === DYNAMIC || (a.c === 'archive' && b.c === 'archive')
     ? VORDER[a.v] - VORDER[b.v] || a.i - b.i
     : a.i - b.i);
 }
 
 // Sections for the grid: one per macOS release, or per category and place
-export function groupItems(list, { sortBy, catName }) {
+export function groupItems(list, { sortBy, catName, cat }) {
+  if (cat === DYNAMIC && sortBy !== 'version') return [{ key: DYNAMIC, label: catName(DYNAMIC), items: list }];
   const groups = [];
   if (sortBy === 'version') {
     for (const d of list) {

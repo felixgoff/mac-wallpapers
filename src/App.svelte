@@ -14,7 +14,7 @@
   }
 
   const visible = $derived(visibleItems(items, { cat, q, sortBy, catName }));
-  const groups = $derived(groupItems(visible, { sortBy, catName }));
+  const groups = $derived(groupItems(visible, { sortBy, catName, cat }));
   const title = $derived(cat === 'all' ? 'All Wallpapers' : catName(cat));
   // Running tile index, so only the first couple of dozen tiles stagger in
   const starts = $derived(groups.reduce((acc, g, k) => [...acc, k ? acc[k - 1] + groups[k - 1].items.length : 0], []));

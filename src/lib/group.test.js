@@ -26,6 +26,15 @@ test('version view groups newest release first', () => {
   assert.deepEqual(groups.map(g => g.label), ['macOS Tahoe 26', 'macOS Sonoma 14', 'Mac OS X Leopard 10.5', 'Mac OS X Tiger 10.4']);
 });
 
+test('Dynamic shows every light/dark wallpaper, newest release first', () => {
+  const extra = [...items, { n: 'Golden Gate', c: 'dynamic-aerials', s: 'Dynamic', v: '27' },
+    { n: 'Mojave', c: 'archive', s: '10.14', v: '10.14', dyn: true }, { n: 'Sonoma', c: 'land', s: 'Sonoma', v: '14', dyn: true }]
+    .map((d, i) => ({ ...d, i }));
+  const list = visibleItems(extra, { cat: 'dynamic-aerials', q: '', sortBy: 'category', catName: c => catName(c) ?? 'Dynamic' });
+  assert.deepEqual(list.map(d => d.n), ['Golden Gate', 'Sonoma', 'Mojave']);
+  assert.equal(groupItems(list, { sortBy: 'category', catName: () => 'Dynamic', cat: 'dynamic-aerials' }).length, 1);
+});
+
 test('search matches names, places and release names', () => {
   const q = query => visibleItems(items, { cat: 'all', q: query, sortBy: 'category', catName }).map(d => d.n);
   assert.deepEqual(q('night'), ['Tahoe Night']);

@@ -23,11 +23,15 @@
         <img loading="lazy" src={d.img} alt="" use:ready onload={() => (loaded = true)} onerror={() => (loaded = true)}>
       </div>
     {/if}
+    {#if d.dyn && !d.anim}
+      <span class="dynb" title="Dynamic wallpaper: changes with Light and Dark appearance"></span>
+    {/if}
     {#if d.anim}
       <span class="anim" title="Animated wallpaper">
         <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.8v6.4a.5.5 0 0 0 .76.43l5.2-3.2a.5.5 0 0 0 0-.86l-5.2-3.2A.5.5 0 0 0 3 1.8z" fill="currentColor"/></svg>
       </span>
     {/if}
+    {#if d.kind !== 'builtin'}
     <a class="dl" href={d.url} target="_blank" rel="noopener"
       class:loading={job?.state === 'loading'} class:indeterminate={job?.state === 'loading' && job.p == null}
       class:done={job?.state === 'done'} style:--p={job?.p ?? 0}
@@ -41,6 +45,7 @@
       <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
       <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
     </a>
+    {/if}
   </div>
   <div class="name" title={d.n}>{d.n}</div>
 </div>

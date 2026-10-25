@@ -10,7 +10,7 @@
   const job = $derived(d && jobs.get(d.i));
   const sec = $derived(d ? section(d) : '');
   const what = $derived(!d ? '' : d.kind === 'aerial' ? '4K video' : d.anim ? 'Animated wallpaper'
-    : d.pattern ? 'Pattern' : d.dyn ? 'Dynamic picture' : 'Picture');
+    : d.kind === 'builtin' ? 'Live wallpaper' : d.pattern ? 'Pattern' : d.dyn ? 'Dynamic picture' : 'Picture');
   const label = $derived(job?.state === 'loading' ? (job.p == null ? 'Downloading…' : `Downloading ${Math.round(job.p * 100)}%`)
     : job?.state === 'done' ? 'Downloaded' : 'Download');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -67,11 +67,15 @@
         <div class="ql-title" id="ql-title">
           {d.n}<small>{VLABEL[d.v]} · {sec && sec !== catName(d.c) ? sec + ' · ' : ''}{catName(d.c)} · {what}{d.size ? ' · ' + mb(d.size) : ''}</small>
         </div>
-        <a class="btn" href={d.url} target="_blank" rel="noopener" style:--p={job?.p ?? 0} onclick={e => onDownloadClick(e, d)}>
-          <span class="fill"></span>
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{@html ARROW}</svg>
-          <span>{label}</span>
-        </a>
+        {#if d.kind === 'builtin'}
+          <span class="btn off">Built into macOS</span>
+        {:else}
+          <a class="btn" href={d.url} target="_blank" rel="noopener" style:--p={job?.p ?? 0} onclick={e => onDownloadClick(e, d)}>
+            <span class="fill"></span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{@html ARROW}</svg>
+            <span>{label}</span>
+          </a>
+        {/if}
       </div>
     {/if}
     <div class="ql-img" bind:this={stage} class:playing class:failed class:still={d && !d.video} class:pattern={d?.pattern}

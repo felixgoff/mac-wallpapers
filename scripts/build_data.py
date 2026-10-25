@@ -92,7 +92,7 @@ FAMILIES = ['Big Sur', 'Catalina', 'Sonoma', 'Hello Metallic', 'hello', 'iMac', 
             'Radial', 'Chroma', 'Grid']
 family = lambda n: next((f for f in FAMILIES if n == f or n.startswith(f + ' ')), '')
 STILL_V = [(r'^Sonoma|^Hello Metallic', '14'), (r'^Ventura', '13'), (r'^iMac ', '15'),
-           (r'^Radial|^Light Stream', '13'), (r'^Monterey|^Motion|^Chroma|^Grid|^Studio Color|^Pro Black', '12'),
+           (r'^Radial|^Light Stream|^Grid', '13'), (r'^Monterey|^Motion|^Chroma|^Studio Color|^Pro Black', '12'),
            (r'^Big Sur|^hello |^The (Beach|Cliffs|Desert|Lake)|^(Peak|Tree|Valley|Dome|Iridescence)$', '11'),
            (r'^Catalina', '10.15'), (r'^Solar Gradients|^Mojave', '10.14')]
 
@@ -113,11 +113,18 @@ for f in os.listdir(DP):
                        s=family(base), v=next((v for p, v in STILL_V if re.search(p, base)), 'other'), kind='still',
                        dyn=dyn, size=a['_DownloadSize'], how='zip'))
 
+# Live wallpapers that macOS draws itself (no file to download); shown so the Dynamic list is complete
+EXT = '/System/Library/ExtensionKit/Extensions'
+for name, tpath in [('Sequoia', f'{EXT}/WallpaperSequoiaExtension.appex/Contents/Resources/thumbnail.heic'),
+                    ('Macintosh', '/System/Library/Wallpapers/.thumbnails/Macintosh.heic')]:
+    stills.append(dict(n=name, img=thumb(tpath, 'builtin-' + name), url='', c='pictures', s='', v='15', kind='builtin',
+                       dyn=True, note=f'A live wallpaper built into macOS Sequoia and later. Choose it in System Settings › Wallpaper; Apple doesn’t offer it as a file.'))
+
 # Keep each family together, ordered the way System Settings lists them
 first = {}
 for x in stills:
     first[x['s'] or x['n']] = min(first.get(x['s'] or x['n'], 1e9), rank(x['n']))
-stills.sort(key=lambda x: (first[x['s'] or x['n']], rank(x['n']), x['n']))
+stills.sort(key=lambda x: (first[x['s'] or x['n']], rank(x['n'])))  # stable: built-ins keep their listed order
 items += stills
 cats += [dict(id='pictures', n='Desktop Pictures', g='Pictures'), dict(id='colors', n='Colors', g='Pictures')]
 
@@ -141,7 +148,7 @@ cats.append(dict(id='archive', n='macOS Archive', g='Pictures'))
 VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
 for x in items:
     assert x['v'] in VERSIONS, x
-    assert x['url'].startswith('https://'), x
+    assert x['url'].startswith('https://') or x['kind'] == 'builtin', x
     assert x['img'].startswith(('https://', 'thumbs/')), x
     assert not x['img'].startswith('thumbs/') or os.path.exists(os.path.join(ROOT, 'public', x['img'])), x
 assert {x['c'] for x in items} == {c['id'] for c in cats}
