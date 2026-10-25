@@ -302,7 +302,8 @@ for x in items:
 # to Wallpaper Engine in one click (and covers Macintosh, which macOS draws live and the site can't package)
 WORKSHOP = {'macOS Sonoma': [('Light', 3531086797), ('Dark', 3531101000)],
             'macOS Tahoe': [('Light', 3545830411), ('Dark', 3545837395)],
-            'Macintosh': [('Classic Color', 3666866664)]}
+            'Macintosh': [('Classic Color', 3666866664)],
+            'Monterey Graphic': [('Animated', 2851230328)], 'Ventura Graphic': [('Animated', 3383116003)]}
 for x in items:
     if x['n'] in WORKSHOP:
         x['workshop'] = [dict(l=l, u=f'https://steamcommunity.com/sharedfiles/filedetails/?id={i}') for l, i in WORKSHOP[x['n']]]
