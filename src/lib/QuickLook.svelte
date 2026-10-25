@@ -2,7 +2,7 @@
   import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey } from './downloads.svelte.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
-  import { ARROW, WE_ICON, PORTRAIT } from './icons.js';
+  import { ARROW, WE_ICON, PORTRAIT, WORKSHOP } from './icons.js';
 
   let { d, open, list, onselect, onclose } = $props();
   let stage = $state(), video = $state();
@@ -116,10 +116,19 @@
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg>
       </button>
     </div>
-    {#if d && (d.note || d.post || d.alts?.length)}
+    {#if d && (d.note || d.post || d.alts?.length || d.workshop)}
       <div class="ql-foot">
         {#if d.note || d.post}
           <div class="ql-note">{d.note ?? ''}{#if d.post} · <a href={d.post} target="_blank" rel="noopener">Source</a>{/if}</div>
+        {/if}
+        {#if d.workshop}
+          <div class="ql-alts" title="Subscribe on the Workshop and Wallpaper Engine adds it">
+            {#each d.workshop as w}
+              <a class="alt" href={w.u} target="_blank" rel="noopener">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html WORKSHOP}</svg>Steam Workshop · {w.l}
+              </a>
+            {/each}
+          </div>
         {/if}
         {#if d.alts?.length}
           <div class="ql-alts">

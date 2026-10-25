@@ -1,7 +1,7 @@
 <script>
   import { jobs, onDownloadClick, onWallpaperEngine, onPortrait, weKey, portraitKey } from './downloads.svelte.js';
   import { patSize, mb } from './versions.js';
-  import { ARROW, WE_ICON, PORTRAIT } from './icons.js';
+  import { ARROW, WE_ICON, PORTRAIT, WORKSHOP } from './icons.js';
 
   let { d, order, selected, onselect, onopen } = $props();
   let loaded = $state(false);
@@ -32,6 +32,13 @@
       <span class="anim" title="Animated wallpaper">
         <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.8v6.4a.5.5 0 0 0 .76.43l5.2-3.2a.5.5 0 0 0 0-.86l-5.2-3.2A.5.5 0 0 0 3 1.8z" fill="currentColor"/></svg>
       </span>
+    {/if}
+    {#if d.kind === 'builtin' && d.workshop}
+      <!-- nothing to download, but it's on the Steam Workshop for Wallpaper Engine -->
+      <a class="dl" href={d.workshop[0].u} target="_blank" rel="noopener" aria-label="{d.n} on the Steam Workshop"
+        title="Wallpaper Engine: “{d.n}” on the Steam Workshop ({d.workshop[0].l})" onclick={e => e.stopPropagation()}>
+        <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html WORKSHOP}</svg>
+      </a>
     {/if}
     {#if d.kind !== 'builtin'}
     <a class="dl" href={d.url} target="_blank" rel="noopener"

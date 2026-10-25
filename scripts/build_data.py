@@ -224,7 +224,8 @@ for name, v, light, dark, thumbs in [
                        post='https://github.com/LAYTAT/macOS-Wallpapers'))
 stills.append(dict(n='Macintosh', img=thumb('/System/Library/Wallpapers/.thumbnails/Macintosh.heic', 'builtin-Macintosh'),
                    url='', c='pictures', s='', v='15', kind='builtin', dyn=True,
-                   note='A live wallpaper built into macOS Sequoia and later. Choose it in System Settings › Wallpaper; Apple doesn’t offer it as a file.'))
+                   note='A live wallpaper built into macOS Sequoia and later. Choose it in System Settings › Wallpaper; Apple doesn’t offer it as a file,'
+                        ' but a recording of its screen saver is on the Steam Workshop for Wallpaper Engine.'))
 
 # Keep each family together, ordered the way System Settings lists them
 first = {}
@@ -296,6 +297,16 @@ for x in items:
         urls = [frames[-1], frames[0]] if n < 4 else [frames[round(n * .45)], frames[-1], frames[round(n * .65)], frames[0]]
     sched = TWO if len(urls) == 2 else FOUR
     x['we'] = dict(video=False, parts=[dict(t=t, h=h, u=u) for (t, h), u in zip(sched, urls)])
+
+# Wallpaper Engine versions other people recorded and shared on the Steam Workshop: subscribing there adds them
+# to Wallpaper Engine in one click (and covers Macintosh, which macOS draws live and the site can't package)
+WORKSHOP = {'macOS Sonoma': [('Light', 3531086797), ('Dark', 3531101000)],
+            'macOS Tahoe': [('Light', 3545830411), ('Dark', 3545837395)],
+            'Macintosh': [('Classic Color', 3666866664)]}
+for x in items:
+    if x['n'] in WORKSHOP:
+        x['workshop'] = [dict(l=l, u=f'https://steamcommunity.com/sharedfiles/filedetails/?id={i}') for l, i in WORKSHOP[x['n']]]
+assert sum('workshop' in x for x in items) == len(WORKSHOP)
 
 # Self-check: everything must work from a public web page
 VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
