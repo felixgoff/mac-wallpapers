@@ -24,6 +24,19 @@ def thumb(src, key, width=428):
     return 'thumbs/' + os.path.basename(out)
 
 
+SLICES = os.path.join(CACHE, 'slices')
+
+
+def slices(key, srcs, w=428, h=268):
+    """A dynamic-wallpaper thumbnail: one diagonal strip per image (light/dark, or dawn/day/dusk/night)."""
+    out = os.path.join(THUMBS, slug('dyn-' + key) + '.jpg')
+    if not os.path.exists(SLICES):
+        subprocess.run(['swiftc', '-O', os.path.join(HERE, 'slices.swift'), '-o', SLICES], check=True)
+    if not os.path.exists(out):
+        subprocess.run([SLICES, out, str(w), str(h), *srcs], check=True)
+    return 'thumbs/' + os.path.basename(out)
+
+
 def words(key, prefix):
     s = re.sub('^' + prefix + '(Description|Cities(?=[A-Z]))?', '', key)
     s = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', s)
@@ -96,6 +109,7 @@ STILL_V = [(r'^Sonoma|^Hello Metallic', '14'), (r'^Ventura', '13'), (r'^iMac ', 
            (r'^Big Sur|^hello |^The (Beach|Cliffs|Desert|Lake)|^(Peak|Tree|Valley|Dome|Iridescence)$', '11'),
            (r'^Catalina', '10.15'), (r'^Solar Gradients|^Mojave', '10.14')]
 
+TIME_OF_DAY = {'Big Sur', 'Catalina', 'The Beach', 'The Cliffs', 'The Desert', 'The Lake', 'Solar Gradients'}
 order = [os.path.splitext(f)[0] for f in plistlib.load(open(os.path.join(DP, '.orderedPictures.plist'), 'rb'))]
 rank = lambda n: order.index(n) if n in order else len(order)
 stills = []
@@ -108,16 +122,20 @@ for f in os.listdir(DP):
     if not a:
         continue
     tpath = meta.get('thumbnailPath') or os.path.join(DP, '.thumbnails', f)
-    dyn = bool(meta.get('isDynamic')) or os.path.exists(os.path.join(DP, '.thumbnails', base + ' Dark.heic'))
-    stills.append(dict(n=base, img=thumb(tpath, base), url=a['__BaseURL'] + a['__RelativePath'], c='pictures',
+    light, dark = (os.path.join(DP, '.thumbnails', f'{base} {m}.heic') for m in ('Light', 'Dark'))
+    dyn = bool(meta.get('isDynamic')) or os.path.exists(dark)
+    # Apple's previews for these already show diagonal time-of-day strips; the rest split light/dark down the middle
+    img = slices(base, [light, dark]) if dyn and base not in TIME_OF_DAY and os.path.exists(light) else thumb(tpath, base)
+    stills.append(dict(n=base, img=img, url=a['__BaseURL'] + a['__RelativePath'], c='pictures',
                        s=family(base), v=next((v for p, v in STILL_V if re.search(p, base)), 'other'), kind='still',
                        dyn=dyn, size=a['_DownloadSize'], how='zip'))
 
 # Live wallpapers that macOS draws itself (no file to download); shown so the Dynamic list is complete
 EXT = '/System/Library/ExtensionKit/Extensions'
-for name, tpath in [('Sequoia', f'{EXT}/WallpaperSequoiaExtension.appex/Contents/Resources/thumbnail.heic'),
-                    ('Macintosh', '/System/Library/Wallpapers/.thumbnails/Macintosh.heic')]:
-    stills.append(dict(n=name, img=thumb(tpath, 'builtin-' + name), url='', c='pictures', s='', v='15', kind='builtin',
+SEQ = f'{EXT}/WallpaperSequoiaExtension.appex/Contents/Resources'
+for name, img in [('Sequoia', slices('Sequoia', [f'{SEQ}/thumbnail light.heic', f'{SEQ}/thumbnail dark.heic'])),
+                  ('Macintosh', thumb('/System/Library/Wallpapers/.thumbnails/Macintosh.heic', 'builtin-Macintosh'))]:
+    stills.append(dict(n=name, img=img, url='', c='pictures', s='', v='15', kind='builtin',
                        dyn=True, note=f'A live wallpaper built into macOS Sequoia and later. Choose it in System Settings › Wallpaper; Apple doesn’t offer it as a file.'))
 
 # Keep each family together, ordered the way System Settings lists them
@@ -134,7 +152,11 @@ EXTRA_V = {'WWDC26': '27', 'Golden Gate Adventure': '27', 'macOS Tahoe Aerials':
 for x in json.load(open(os.path.join(CACHE, 'bag', 'extras.json'))):
     ext = os.path.splitext(urllib.parse.urlparse(x['url']).path)[1].lower()
     src = os.path.join(CACHE, 'bag', 'orig', os.path.basename(x['thumb']))
-    items.append(dict(n=x['n'], img=thumb(src, 'extra-' + x['s'] + '-' + x['n']), url=x['url'], c='extras', s=x['s'],
+    tahoe = lambda *t: [os.path.join(CACHE, 'bag', 'orig', f'Tahoe{p}.png') for p in t]
+    img = (slices(x['n'], tahoe('Day', 'Night')) if x['n'].startswith('Tahoe Day/Night')
+           else slices(x['n'], tahoe('Dawn', 'Day', 'Dusk', 'Night')) if x['n'].startswith('Tahoe Time of Day')
+           else thumb(src, 'extra-' + x['s'] + '-' + x['n']))
+    items.append(dict(n=x['n'], img=img, url=x['url'], c='extras', s=x['s'],
                       v=EXTRA_V[x['s']], kind='still', dyn=x['dyn'], size=x['size'], alts=x['alts'], note=x['note'],
                       post=x['post'], how='link' if 'drive.google' in x['url'] else 'fetch', ext=ext or '.png'))
 cats.append(dict(id='extras', n='Apple Extras', g='Pictures'))
@@ -142,6 +164,17 @@ cats.append(dict(id='extras', n='Apple Extras', g='Pictures'))
 # ---- The "macOS Wallpapers" Google Photos album (album.py) ----------------------
 import album
 items += album.entries(stills)
+
+# Mojave's dynamic wallpaper only exists in the album as 16 frames: strip dawn, day, dusk and night together
+moj = next(x for x in items if x['n'] == 'Mojave Dynamic')
+frames = [moj['url']] + [a['u'] for a in moj['alts']]
+srcs = []
+for k in (3, 8, 12, 15):
+    p = os.path.join(CACHE, 'album', f'mojave-{k}.webp')
+    if not os.path.exists(p):
+        subprocess.run(['curl', '-sfL', '-o', p, frames[k - 1][:-len('=d')] + '=w600'], check=True)
+    srcs.append(p)
+moj['img'] = slices('Mojave Dynamic', srcs)
 cats.append(dict(id='archive', n='macOS Archive', g='Pictures'))
 
 # Self-check: everything must work from a public web page
@@ -154,4 +187,7 @@ for x in items:
 assert {x['c'] for x in items} == {c['id'] for c in cats}
 
 json.dump(dict(cats=cats, items=items), open(os.path.join(ROOT, 'src', 'data.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
+used = {os.path.basename(x['img']) for x in items if x['img'].startswith('thumbs/')}
+for f in set(os.listdir(THUMBS)) - used:
+    os.remove(os.path.join(THUMBS, f))
 print(len(items), 'wallpapers;', len(os.listdir(THUMBS)), 'thumbnails')
