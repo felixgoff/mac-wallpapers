@@ -44,7 +44,7 @@ cp ~/Downloads/entries.json scripts/cache/   # Apple's aerial manifest
 curl -o scripts/cache/catalog.xml https://mesu.apple.com/assets/macos/com_apple_MobileAsset_DesktopPicture/com_apple_MobileAsset_DesktopPicture.xml
 python3 scripts/bag.py           # Apple's wallpapers republished by Basic Apple Guy
 python3 scripts/fetch_album.py   # the "macOS Wallpapers" Google Photos album
-python3 scripts/build_data.py    # writes src/data.json, public/thumbs/ and public/clips/
+python3 scripts/build_data.py    # writes src/data.json and public/thumbs/
 ```
 
 `scripts/cache/` holds the downloaded inputs and isn't committed.
@@ -62,8 +62,8 @@ All wallpapers are © Apple Inc. This is an unofficial fan project and isn't aff
 
 ## Known limits
 
-- Only Safari trusts the certificate of Apple's aerial server. Other browsers download aerials through a Cloudflare
-  Worker proxy (`dry-dawn-9e3c.felixmgoff.workers.dev`, see `src/lib/downloads.svelte.js`) and preview an 8-second
-  low-res clip the site hosts (`public/clips/`).
+- Only Safari trusts the certificate of Apple's aerial server. Other browsers preview and download aerials through a
+  Cloudflare Worker proxy (`dry-dawn-9e3c.felixmgoff.workers.dev`, see `src/lib/downloads.svelte.js`). Firefox can't
+  play Apple's HEVC videos, so aerial previews show the still picture there; downloads still work.
 - Wallpaper Engine packages contain Apple's original 4K HEVC videos; they're untested in Wallpaper Engine itself, and some PCs need Microsoft's HEVC Video Extensions to play them.
 - macOS versions for archive items follow the album's order and are best guesses in places.

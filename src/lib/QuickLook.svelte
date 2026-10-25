@@ -1,5 +1,5 @@
 <script>
-  import { SAFARI, jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say } from './downloads.svelte.js';
+  import { apple, jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say } from './downloads.svelte.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
   import { ARROW, WE_ICON, PORTRAIT, WORKSHOP, LINK } from './icons.js';
@@ -29,22 +29,13 @@
     catch { prompt('Copy this link:', url); } // clipboard can be blocked (e.g. insecure contexts)
   }
 
-  // Stream the real video while open; the blurred thumbnail and spinner hold its place until it plays.
-  // Other browsers preview Apple's aerials with the site's short clip: Firefox can't play HEVC, and it spares the proxy.
+  // Stream the real video while open; the blurred thumbnail and spinner hold its place until it plays
   $effect(() => {
     if (!video) return;
     playing = failed = false;
-    if (open && d?.video) { video.src = SAFARI ? d.video : d.clip ?? d.video; video.play().catch(() => {}); }
+    if (open && d?.video) { video.src = apple(d.video); video.play().catch(() => {}); }
     else { video.pause(); video.removeAttribute('src'); video.load(); }
   });
-
-  // If the video can't load anyway, fall back to the clip
-  function onVideoError() {
-    const src = video.getAttribute('src');
-    if (!src) return;
-    if (d.clip && src !== d.clip) { video.src = d.clip; video.play().catch(() => {}); }
-    else failed = true;
-  }
 
   export function step(dir) {
     const k = list.findIndex(x => x.i === d.i);
@@ -125,7 +116,7 @@
       style:background-image={d?.pattern ? `url('${d.img}')` : null} style:background-size={d?.pattern ? patSize(d) * 2 + 'px' : null}>
       {#if d && !d.pattern}<img src={d.img} alt="">{/if}
       <video bind:this={video} muted loop playsinline preload="auto"
-        onplaying={() => (playing = true)} onerror={onVideoError}></video>
+        onplaying={() => (playing = true)} onerror={() => video.getAttribute('src') && (failed = true)}></video>
       <div class="spinner" aria-hidden="true">
         {#each Array(8) as _, k}<i style="transform: rotate({k * 45}deg); animation-delay: {(k - 8) / 8}s"></i>{/each}
       </div>

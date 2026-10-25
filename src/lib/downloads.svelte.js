@@ -12,9 +12,9 @@ export function say(msg, ms = 2400) {
   timer = setTimeout(() => (toast.show = false), ms);
 }
 
-// Only Safari trusts the certificate of Apple's aerial server; other browsers fetch its videos through a proxy
-export const SAFARI = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Firefox/.test(navigator.userAgent);
-const apple = u => !SAFARI && u.startsWith('https://sylvan.apple.com/') ? 'https://dry-dawn-9e3c.felixmgoff.workers.dev/' + u : u;
+// Only Safari trusts the certificate of Apple's aerial server; other browsers load its videos through a proxy
+const SAFARI = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Firefox/.test(navigator.userAgent);
+export const apple = u => !SAFARI && u.startsWith('https://sylvan.apple.com/') ? 'https://dry-dawn-9e3c.felixmgoff.workers.dev/' + u : u;
 
 // Downloads stream through fetch so the badge can show real progress. If the browser can't
 // fetch, the next click just follows the link.

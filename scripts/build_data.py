@@ -62,7 +62,7 @@ def words(key, prefix):
 
 
 # ---- Aerials (Apple's idleassetsd entries.json) ------------------------------
-# Thumbnails are copied locally: sylvan.apple.com's certificate isn't trusted by Chrome.
+# Thumbnails are made locally: Apple's preview images are full-size PNGs.
 ATHUMBS = os.path.join(CACHE, 'aerial-thumbs')
 os.makedirs(ATHUMBS, exist_ok=True)
 INDEX = os.path.join(ATHUMBS, 'index.json')
@@ -307,35 +307,6 @@ for x in items:
     if x['n'] in WORKSHOP:
         x['workshop'] = [dict(l=l, u=f'https://steamcommunity.com/sharedfiles/filedetails/?id={i}') for l, i in WORKSHOP[x['n']]]
 assert sum('workshop' in x for x in items) == len(WORKSHOP)
-
-# Short low-res clips of Apple's aerials, hosted on the site: Quick Look previews with them in browsers
-# other than Safari. ffmpeg reads only the first seconds of each 4K video.
-CLIPS = os.path.join(ROOT, 'public', 'clips')
-os.makedirs(CLIPS, exist_ok=True)
-
-
-def clip(url):
-    rel = 'clips/' + slug(url.rsplit('/', 1)[1].removesuffix('.mov')) + '.mp4'
-    p = os.path.join(ROOT, 'public', rel)
-    for attempt in range(3):  # Apple's server drops a connection now and then
-        if os.path.exists(p):
-            break
-        r = subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-t', '8', '-i', url, '-an', '-vf', 'scale=960:-2,fps=30',
-                        '-c:v', 'libx264', '-crf', '28', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
-                        p + '.part.mp4'])
-        if r.returncode == 0:
-            os.rename(p + '.part.mp4', p)
-    assert os.path.exists(p), url
-    return rel
-
-
-from concurrent.futures import ThreadPoolExecutor
-aerials = [x for x in items if x.get('video', '').startswith('https://sylvan.apple.com/')]
-urls = sorted({x['video'] for x in aerials})  # once each: sets start with a single aerial's video
-with ThreadPoolExecutor(2) as pool:
-    clips = dict(zip(urls, pool.map(clip, urls)))
-for x in aerials:
-    x['clip'] = clips[x['video']]
 
 # Self-check: everything must work from a public web page
 VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
