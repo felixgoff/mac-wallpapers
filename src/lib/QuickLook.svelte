@@ -23,7 +23,8 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   async function copyLink() {
-    const url = location.origin + location.pathname + '#' + d.id;
+    // w/<id>/ is a page made at build time with the wallpaper's preview for chats (scripts/share-pages.js)
+    const url = location.origin + location.pathname + (import.meta.env.DEV ? '#' + d.id : `w/${d.id}/`);
     try { await navigator.clipboard.writeText(url); say(`Copied a link to “${d.n}”`); }
     catch { prompt('Copy this link:', url); } // clipboard can be blocked (e.g. insecure contexts)
   }
@@ -35,6 +36,14 @@
     if (open && d?.video) { video.src = d.video; video.play().catch(() => {}); }
     else { video.pause(); video.removeAttribute('src'); video.load(); }
   });
+
+  // Browsers that don't trust Apple's video server (Chrome) get the short clip the site hosts instead
+  function onVideoError() {
+    const src = video.getAttribute('src');
+    if (!src) return;
+    if (d.clip && src !== d.clip) { video.src = d.clip; video.play().catch(() => {}); }
+    else failed = true;
+  }
 
   export function step(dir) {
     const k = list.findIndex(x => x.i === d.i);
@@ -115,7 +124,7 @@
       style:background-image={d?.pattern ? `url('${d.img}')` : null} style:background-size={d?.pattern ? patSize(d) * 2 + 'px' : null}>
       {#if d && !d.pattern}<img src={d.img} alt="">{/if}
       <video bind:this={video} muted loop playsinline preload="auto"
-        onplaying={() => (playing = true)} onerror={() => video.getAttribute('src') && (failed = true)}></video>
+        onplaying={() => (playing = true)} onerror={onVideoError}></video>
       <div class="spinner" aria-hidden="true">
         {#each Array(8) as _, k}<i style="transform: rotate({k * 45}deg); animation-delay: {(k - 8) / 8}s"></i>{/each}
       </div>

@@ -3,12 +3,14 @@
 Every Mac wallpaper in one place, in a page that looks like a macOS window: the macOS aerials,
 the current Desktop Pictures, Apple's extra wallpapers and an archive going back to Mac OS X 10.0.
 Browse by category or by macOS release, preview with Quick Look (double-click or Space) and download.
-Every wallpaper has a share link (Quick Look › Copy Link, e.g. `…/mac-wallpapers/#macos-tahoe`) that opens straight into it.
+Every wallpaper has a share link (Quick Look › Copy Link, e.g. `…/mac-wallpapers/w/macos-tahoe/`) that shows the
+wallpaper's name and picture in chats and opens straight into it. `scripts/share-pages.js` writes those pages after `vite build`.
 
 **Live site:** https://felixgoff.github.io/mac-wallpapers/
 
 Built with [Svelte](https://svelte.dev) and [Vite](https://vite.dev) as a static site. Every push to
-`main` is tested, built and deployed to GitHub Pages by `.github/workflows/deploy.yml`.
+`main` is tested, built and deployed to GitHub Pages by `.github/workflows/deploy.yml`; every Monday
+`.github/workflows/check-links.yml` checks that all download links still work (`node scripts/check-links.js` runs it locally).
 
 ## Wallpaper Engine packages
 
@@ -42,7 +44,7 @@ cp ~/Downloads/entries.json scripts/cache/   # Apple's aerial manifest
 curl -o scripts/cache/catalog.xml https://mesu.apple.com/assets/macos/com_apple_MobileAsset_DesktopPicture/com_apple_MobileAsset_DesktopPicture.xml
 python3 scripts/bag.py           # Apple's wallpapers republished by Basic Apple Guy
 python3 scripts/fetch_album.py   # the "macOS Wallpapers" Google Photos album
-python3 scripts/build_data.py    # writes src/data.json and public/thumbs/
+python3 scripts/build_data.py    # writes src/data.json, public/thumbs/ and public/clips/
 ```
 
 `scripts/cache/` holds the downloaded inputs and isn't committed.
@@ -60,6 +62,7 @@ All wallpapers are © Apple Inc. This is an unofficial fan project and isn't aff
 
 ## Known limits
 
-- Apple's aerial server uses a certificate Chrome doesn't trust, so aerial videos preview and download in Safari only.
+- Apple's aerial server uses a certificate Chrome doesn't trust, so aerial videos download in Safari only. Other browsers
+  preview an 8-second low-res clip the site hosts (`public/clips/`) instead.
 - Wallpaper Engine packages contain Apple's original 4K HEVC videos; they're untested in Wallpaper Engine itself, and some PCs need Microsoft's HEVC Video Extensions to play them.
 - macOS versions for archive items follow the album's order and are best guesses in places.
