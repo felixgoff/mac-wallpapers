@@ -1,12 +1,13 @@
 <script>
-  import { jobs, onDownloadClick, onWallpaperEngine, weKey } from './downloads.svelte.js';
+  import { jobs, onDownloadClick, onWallpaperEngine, onPortrait, weKey, portraitKey } from './downloads.svelte.js';
   import { patSize, mb } from './versions.js';
-  import { ARROW, WE_ICON } from './icons.js';
+  import { ARROW, WE_ICON, PORTRAIT } from './icons.js';
 
   let { d, order, selected, onselect, onopen } = $props();
   let loaded = $state(false);
   const job = $derived(jobs.get(d.i));
   const weJob = $derived(jobs.get(weKey(d)));
+  const ptJob = $derived(jobs.get(portraitKey(d)));
 
   // An image already in the cache can finish before Svelte attaches onload
   const ready = img => { if (img.complete && img.naturalWidth) loaded = true; };
@@ -47,6 +48,18 @@
       <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
       <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
     </a>
+    {/if}
+    {#if d.portrait}
+      <a class="dl pt" href="#portrait" aria-label="Download {d.n} for portrait screens"
+        class:loading={ptJob?.state === 'loading'} class:done={ptJob?.state === 'done'} style:--p={ptJob?.p ?? 0}
+        title={ptJob?.state === 'loading' ? `Downloading the portrait videos — ${mb(ptJob.got)} of ${mb(ptJob.total)}. Click to stop.`
+          : `Portrait: the light and dark videos for portrait screens (${mb(d.portrait.size)}, best in Safari)`}
+        onclick={e => { e.stopPropagation(); onPortrait(e, d); }}>
+        <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html PORTRAIT}</svg>
+        <svg class="ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>
+        <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
+        <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
+      </a>
     {/if}
     {#if d.we}
       <a class="dl we" href="#wallpaper-engine" aria-label="Wallpaper Engine: {d.n}"

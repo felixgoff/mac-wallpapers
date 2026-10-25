@@ -1,8 +1,8 @@
 <script>
-  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, weKey } from './downloads.svelte.js';
+  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey } from './downloads.svelte.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
-  import { ARROW, WE_ICON } from './icons.js';
+  import { ARROW, WE_ICON, PORTRAIT } from './icons.js';
 
   let { d, open, list, onselect, onclose } = $props();
   let stage = $state(), video = $state();
@@ -15,6 +15,9 @@
   const label = $derived(job?.state === 'loading' ? (job.p == null ? 'Downloading…' : `Downloading ${Math.round(job.p * 100)}%`)
     : job?.state === 'done' ? 'Downloaded' : d?.kind === 'set' ? 'Download videos' : 'Download');
   const weJob = $derived(d && jobs.get(weKey(d)));
+  const ptJob = $derived(d && jobs.get(portraitKey(d)));
+  const ptLabel = $derived(ptJob?.state === 'loading' ? `Portrait ${Math.round((ptJob.p ?? 0) * 100)}%`
+    : ptJob?.state === 'done' ? 'Saved' : 'Portrait');
   const weLabel = $derived(weJob?.state === 'loading' ? `Building ${Math.round((weJob.p ?? 0) * 100)}%`
     : weJob?.state === 'done' ? 'Saved' : 'Wallpaper Engine');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -71,6 +74,14 @@
         <div class="ql-title" id="ql-title">
           {d.n}<small>{VLABEL[d.v]} · {sec && sec !== catName(d.c) ? sec + ' · ' : ''}{catName(d.c)} · {what}{d.size ? ' · ' + mb(d.size) : ''}</small>
         </div>
+        {#if d.portrait}
+          <a class="btn alt-btn" href="#portrait" style:--p={ptJob?.p ?? 0} onclick={e => onPortrait(e, d)}
+            title="The light and dark videos for portrait screens">
+            <span class="fill"></span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html PORTRAIT}</svg>
+            <span>{ptLabel}</span>
+          </a>
+        {/if}
         {#if d.we}
           <a class="btn alt-btn" href="#wallpaper-engine" style:--p={weJob?.p ?? 0} onclick={e => onWallpaperEngine(e, d)}
             title="A Wallpaper Engine package that follows the time of day">

@@ -94,12 +94,29 @@ for a in d['assets']:  # file order is already grouped by category and subcatego
     if ' ' not in name and '_' in name:  # e.g. GG_A_DAY_BLUFFS_C35_V25_HFR_HEVC
         parts = name.split('_')
         name = f"{sub} {parts[2].title()}" if len(parts) > 2 else name
-    v = a.get('variant') or {}
-    if v:
-        name += ' — ' + v.get('appearance', '').title() + (' (Portrait)' if v.get('orientation') == 'portrait' else '')
     url = a['url-4K-SDR-240FPS']
     items.append(dict(n=name, img=aerial_thumb(a['previewImage']), url=url, c=a['categories'][0], s=sub,
-                      v=AERIAL_V.get(sub, '14'), kind='aerial', anim=True, video=url, ext='.mov'))
+                      v=AERIAL_V.get(sub, '14'), kind='aerial', anim=True, video=url, ext='.mov', variant=a.get('variant')))
+
+# macOS Golden Gate's wallpaper comes as four videos (light/dark × landscape/portrait): make it one dynamic
+# wallpaper whose Download saves the landscape pair, Portrait the portrait pair, and Wallpaper Engine follows the clock
+var = {(x['variant']['appearance'], x['variant']['orientation']): x for x in items if x.get('variant')}
+if var:
+    first = min(items.index(x) for x in var.values())
+    for x in var.values():
+        items.remove(x)
+    land = [var[('light', 'landscape')], var[('dark', 'landscape')]]
+    port = [var[('light', 'portrait')], var[('dark', 'portrait')]]
+    items.insert(first, dict(
+        n='macOS Golden Gate', img=slices('macOS Golden Gate', [os.path.join(ROOT, 'public', x['img']) for x in land]),
+        url='', c=land[0]['c'], s=land[0]['s'], v=land[0]['v'], kind='set', anim=True, dyn=True, video=land[0]['url'],
+        size=sum(remote_size(x['url']) for x in land),
+        we=dict(video=True, parts=[dict(t=t, h=h, u=x['url']) for t, h, x in zip(('Light', 'Dark'), (7, 19), land)]),
+        portrait=dict(size=sum(remote_size(x['url']) for x in port), parts=[dict(t=t, u=x['url']) for t, x in zip(('Light', 'Dark'), port)]),
+        note='macOS Golden Gate’s default wallpaper: light by day, dark at night. Download saves the landscape videos, Portrait the'
+             ' portrait ones (best in Safari on a Mac, as Chrome doesn’t trust Apple’s video server).'))
+for x in items:
+    x.pop('variant', None)
 
 # Apple gives many shots the same label ("New York" ×4); number them so tiles are distinguishable
 counts, seen = {}, {}

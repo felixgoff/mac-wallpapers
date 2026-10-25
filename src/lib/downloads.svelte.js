@@ -61,23 +61,26 @@ async function download(d) {
   }
 }
 
-// Wallpaper Engine work is tracked separately from the normal download of the same wallpaper
+// Wallpaper Engine and portrait downloads are tracked separately from the normal download
 export const weKey = d => `${d.i}:we`;
+export const portraitKey = d => `${d.i}:portrait`;
 
 // mode 'we': a Wallpaper Engine package (videos inside for aerial sets, web images for stills);
-// mode 'videos': the raw videos of an aerial set, zipped
+// mode 'videos' / 'portrait': the raw videos of an aerial set, zipped
 async function buildPackage(d, mode) {
-  const key = mode === 'we' ? weKey(d) : d.i, withVideos = mode === 'videos' || d.we.video;
+  const key = mode === 'we' ? weKey(d) : mode === 'portrait' ? portraitKey(d) : d.i;
+  const parts = mode === 'portrait' ? d.portrait.parts : mode === 'videos' || d.we.video ? d.we.parts : [];
+  const total = mode === 'portrait' ? d.portrait.size : d.size;
   const cur = jobs.get(key);
   if (cur?.state === 'loading') return cur.ctrl.abort();
-  const j = $state({ state: 'loading', p: 0, got: 0, total: d.size, ctrl: new AbortController() });
+  const j = $state({ state: 'loading', p: 0, got: 0, total, ctrl: new AbortController() });
   jobs.set(key, j);
-  const what = mode === 'we' ? `“${d.n}” for Wallpaper Engine` : `“${d.n}” videos`;
+  const what = mode === 'we' ? `“${d.n}” for Wallpaper Engine` : `“${d.n}” ${mode === 'portrait' ? 'portrait ' : ''}videos`;
   try {
-    if (withVideos) say(`Building ${what} — downloading ${mb(d.size)} of Apple’s videos…`, 6000);
+    if (parts.length) say(`Building ${what} — downloading ${mb(total)} of Apple’s videos…`, 6000);
     const videos = [];
     let got = 0, last = 0;
-    for (const part of withVideos ? d.we.parts : []) {
+    for (const part of parts) {
       const res = await fetch(part.u, { signal: j.ctrl.signal });
       if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
       const reader = res.body.getReader(), chunks = [];
@@ -90,11 +93,11 @@ async function buildPackage(d, mode) {
         size += value.length;
         got += value.length;
         const now = performance.now();
-        if (now - last > 120) { last = now; j.got = got; j.p = Math.min(got / d.size, 0.99); }
+        if (now - last > 120) { last = now; j.got = got; j.p = Math.min(got / total, 0.99); }
       }
       videos.push({ name: videoName(part), blob: new Blob(chunks), size, crc });
     }
-    const name = `${d.n} (${mode === 'we' ? 'Wallpaper Engine' : 'videos'})`;
+    const name = `${d.n} (${mode === 'we' ? 'Wallpaper Engine' : mode === 'portrait' ? 'portrait videos' : 'videos'})`;
     if (mode === 'we') {
       const preview = new Uint8Array(await (await fetch(d.img)).arrayBuffer());
       saveBlob(zip(packageFiles(d, videos, preview)), fileName(name, '.zip'));
@@ -114,6 +117,11 @@ async function buildPackage(d, mode) {
 export function onWallpaperEngine(e, d) {
   e.preventDefault();
   buildPackage(d, 'we');
+}
+
+export function onPortrait(e, d) {
+  e.preventDefault();
+  buildPackage(d, 'portrait');
 }
 
 export function onDownloadClick(e, d) {
