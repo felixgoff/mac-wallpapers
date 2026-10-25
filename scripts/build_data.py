@@ -98,23 +98,34 @@ for a in d['assets']:  # file order is already grouped by category and subcatego
     items.append(dict(n=name, img=aerial_thumb(a['previewImage']), url=url, c=a['categories'][0], s=sub,
                       v=AERIAL_V.get(sub, '14'), kind='aerial', anim=True, video=url, ext='.mov', variant=a.get('variant')))
 
-# macOS Golden Gate's wallpaper comes as four videos (light/dark × landscape/portrait): make it one dynamic
-# wallpaper whose Download saves the landscape pair, Portrait the portrait pair, and Wallpaper Engine follows the clock
+# Animated wallpapers that come as four videos (light/dark × landscape/portrait) become one dynamic
+# wallpaper: Download saves the landscape pair, Portrait the portrait pair, Wallpaper Engine follows the clock
+def animated(name, land, port, img, c, s, v):
+    return dict(n=name, img=img, url='', c=c, s=s, v=v, kind='set', anim=True, dyn=True, video=land[0],
+                size=sum(map(remote_size, land)),
+                we=dict(video=True, parts=[dict(t=t, h=h, u=u) for t, h, u in zip(('Light', 'Dark'), (7, 19), land)]),
+                portrait=dict(size=sum(map(remote_size, port)), parts=[dict(t=t, u=u) for t, u in zip(('Light', 'Dark'), port)]),
+                note=f'{name}’s animated wallpaper and screen saver: light by day, dark at night. Download saves the landscape'
+                     ' videos, Portrait the portrait ones (best in Safari on a Mac, as Chrome doesn’t trust Apple’s video server).')
+
+
 var = {(x['variant']['appearance'], x['variant']['orientation']): x for x in items if x.get('variant')}
-if var:
+if var:  # macOS Golden Gate, from the aerial manifest
     first = min(items.index(x) for x in var.values())
     for x in var.values():
         items.remove(x)
     land = [var[('light', 'landscape')], var[('dark', 'landscape')]]
-    port = [var[('light', 'portrait')], var[('dark', 'portrait')]]
-    items.insert(first, dict(
-        n='macOS Golden Gate', img=slices('macOS Golden Gate', [os.path.join(ROOT, 'public', x['img']) for x in land]),
-        url='', c=land[0]['c'], s=land[0]['s'], v=land[0]['v'], kind='set', anim=True, dyn=True, video=land[0]['url'],
-        size=sum(remote_size(x['url']) for x in land),
-        we=dict(video=True, parts=[dict(t=t, h=h, u=x['url']) for t, h, x in zip(('Light', 'Dark'), (7, 19), land)]),
-        portrait=dict(size=sum(remote_size(x['url']) for x in port), parts=[dict(t=t, u=x['url']) for t, x in zip(('Light', 'Dark'), port)]),
-        note='macOS Golden Gate’s default wallpaper: light by day, dark at night. Download saves the landscape videos, Portrait the'
-             ' portrait ones (best in Safari on a Mac, as Chrome doesn’t trust Apple’s video server).'))
+    items.insert(first, animated('macOS Golden Gate', [x['url'] for x in land],
+                                 [var[(m, 'portrait')]['url'] for m in ('light', 'dark')],
+                                 slices('macOS Golden Gate', [os.path.join(ROOT, 'public', x['img']) for x in land]),
+                                 land[0]['c'], land[0]['s'], land[0]['v']))
+    # macOS Tahoe: its wallpaper extension lists the animated versions Apple hosts
+    NEPTUNE = '/System/Library/ExtensionKit/Extensions/NeptuneOneWallpaper.appex/Contents/Resources'
+    m = json.load(open(f'{NEPTUNE}/manifest.json'))
+    items.insert(first + 1, animated('macOS Tahoe', [m['lightLandscapeRemoteURL'], m['darkLandscapeRemoteURL']],
+                                     [m['lightPortraitRemoteURL'], m['darkPortraitRemoteURL']],
+                                     slices('Tahoe', [f'{NEPTUNE}/Tahoe{t}.heic' for t in ('Light', 'Dark')]),
+                                     land[0]['c'], land[0]['s'], '26'))
 for x in items:
     x.pop('variant', None)
 
