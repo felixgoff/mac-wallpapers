@@ -8,8 +8,19 @@
     <link rel="icon" type="image/png" href="/icon.png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <title>Mac Wallpapers</title>
+    <style>
+      /* Loading screen: shown straight away, faded out by main.js once the app is up */
+      #splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: #f5f5f7; transition: opacity .5s ease; }
+      #splash img { width: min(46vw, 260px); animation: splash-in .8s cubic-bezier(.2,.8,.2,1) both, splash-breathe 2.4s ease-in-out .8s infinite; }
+      #splash.done { opacity: 0; pointer-events: none; }
+      @keyframes splash-in { from { opacity: 0; transform: scale(.94); } }
+      @keyframes splash-breathe { 50% { transform: scale(1.03); } }
+      @media (prefers-color-scheme: dark) { #splash { background: #1e1e1e; } }
+      @media (prefers-reduced-motion: reduce) { #splash img { animation: none; } }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true"><img src="/splash.webp" alt=""></div>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
