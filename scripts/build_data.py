@@ -1,12 +1,13 @@
 # Builds src/data.json and public/thumbs/ from Apple's aerial manifest, the Desktop Pictures
 # on this Mac, Apple's desktop-picture catalog, Basic Apple Guy extras and the Google Photos album.
 # Inputs live in scripts/cache (see README). Run on a Mac: python3 scripts/build_data.py
-import json, os, plistlib, re, subprocess, urllib.parse
+import json, os, plistlib, re, shutil, subprocess, urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, 'cache')
 ROOT = os.path.dirname(HERE)
 THUMBS = os.path.join(ROOT, 'public', 'thumbs')
+DP = '/System/Library/Desktop Pictures'
 os.makedirs(THUMBS, exist_ok=True)
 d = json.load(open(os.path.join(CACHE, 'entries.json')))
 
@@ -101,10 +102,11 @@ for a in d['assets']:  # file order is already grouped by category and subcatego
 # Animated wallpapers that come as four videos (light/dark × landscape/portrait) become one dynamic
 # wallpaper: Download saves the landscape pair, Portrait the portrait pair, Wallpaper Engine follows the clock
 def animated(name, land, port, img, c, s, v):
+    size = lambda u: os.path.getsize(os.path.join(ROOT, 'public', u)) if u.startswith('videos/') else remote_size(u)
     return dict(n=name, img=img, url='', c=c, s=s, v=v, kind='set', anim=True, dyn=True, video=land[0],
-                size=sum(map(remote_size, land)),
+                size=sum(map(size, land)),
                 we=dict(video=True, parts=[dict(t=t, h=h, u=u) for t, h, u in zip(('Light', 'Dark'), (7, 19), land)]),
-                portrait=dict(size=sum(map(remote_size, port)), parts=[dict(t=t, u=u) for t, u in zip(('Light', 'Dark'), port)]),
+                portrait=dict(size=sum(map(size, port)), parts=[dict(t=t, u=u) for t, u in zip(('Light', 'Dark'), port)]),
                 note=f'{name}’s animated wallpaper and screen saver: light by day, dark at night. Download saves the landscape'
                      ' videos, Portrait the portrait ones (best in Safari on a Mac, as Chrome doesn’t trust Apple’s video server).')
 
@@ -126,6 +128,20 @@ if var:  # macOS Golden Gate, from the aerial manifest
                                      [m['lightPortraitRemoteURL'], m['darkPortraitRemoteURL']],
                                      slices('Tahoe', [f'{NEPTUNE}/Tahoe{t}.heic' for t in ('Light', 'Dark')]),
                                      land[0]['c'], land[0]['s'], '26'))
+    # macOS Sonoma: Apple only ships these videos inside macOS, so the site hosts copies in public/videos
+    SONOMA = os.path.join(DP, '.wallpapers', 'Sonoma')
+    os.makedirs(os.path.join(ROOT, 'public', 'videos'), exist_ok=True)
+    son = {}
+    for m in ('Light', 'Dark'):
+        for o in ('Landscape', 'Portrait'):
+            rel = f'videos/sonoma-{m.lower()}-{o.lower()}.mov'
+            if not os.path.exists(os.path.join(ROOT, 'public', rel)):
+                shutil.copy(os.path.join(SONOMA, f'Sonoma Graphic {m} {o}.mov'), os.path.join(ROOT, 'public', rel))
+            son[m, o] = rel
+    items.insert(first + 2, animated('macOS Sonoma', [son['Light', 'Landscape'], son['Dark', 'Landscape']],
+                                     [son['Light', 'Portrait'], son['Dark', 'Portrait']],
+                                     slices('Sonoma', [os.path.join(DP, '.thumbnails', f'Sonoma {t}.heic') for t in ('Light', 'Dark')]),
+                                     land[0]['c'], land[0]['s'], '14'))
 for x in items:
     x.pop('variant', None)
 
@@ -162,7 +178,6 @@ for sub in dict.fromkeys(x['s'] for x in items):
 # macOS lists them in /System/Library/Desktop Pictures as .madesktop stubs whose full image
 # macOS downloads on demand; Apple's public MobileAsset catalog has the download for each.
 # Pictures that exist only as local files can't be offered on a public site, so they're left out.
-DP = '/System/Library/Desktop Pictures'
 catalog = {a['DesktopPictureID']: a for a in plistlib.load(open(os.path.join(CACHE, 'catalog.xml'), 'rb'))['Assets']}
 FAMILIES = ['Big Sur', 'Catalina', 'Sonoma', 'Hello Metallic', 'hello', 'iMac', 'Mac', 'Light Stream', 'Motion',
             'Radial', 'Chroma', 'Grid']
