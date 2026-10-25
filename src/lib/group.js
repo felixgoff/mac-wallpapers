@@ -4,6 +4,16 @@ import { VLABEL, VORDER, section } from './versions.js';
 export const DYNAMIC = 'dynamic-aerials';
 export const inCategory = (d, cat) => cat === 'all' || d.c === cat || (cat === DYNAMIC && !!d.dyn);
 
+// Link-friendly ids from names ("macOS Tahoe" -> "macos-tahoe"); repeats get -2, -3… in list order
+export function slugs(names) {
+  const seen = {};
+  return names.map(n => {
+    const base = n.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'wallpaper';
+    seen[base] = (seen[base] ?? 0) + 1;
+    return seen[base] > 1 ? `${base}-${seen[base]}` : base;
+  });
+}
+
 // The wallpapers shown for a category and search, in display order
 export function visibleItems(items, { cat, q, sortBy, catName }) {
   q = q.trim().toLowerCase();

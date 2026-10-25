@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { visibleItems, groupItems } from './group.js';
+import { visibleItems, groupItems, slugs } from './group.js';
 
 const catName = c => ({ land: 'Landscapes', sea: 'Underwater', archive: 'macOS Archive' })[c];
 const items = [
@@ -33,6 +33,11 @@ test('Dynamic shows every light/dark wallpaper, newest release first', () => {
   const list = visibleItems(extra, { cat: 'dynamic-aerials', q: '', sortBy: 'category', catName: c => catName(c) ?? 'Dynamic' });
   assert.deepEqual(list.map(d => d.n), ['Golden Gate', 'Sonoma', 'Mojave']);
   assert.equal(groupItems(list, { sortBy: 'category', catName: () => 'Dynamic', cat: 'dynamic-aerials' }).length, 1);
+});
+
+test('share-link ids are readable and unique', () => {
+  assert.deepEqual(slugs(['macOS Tahoe', 'Tahoe Day/Night (Dynamic)', 'Eagle & Waterfall', 'Wave', 'Wave', 'Café']),
+    ['macos-tahoe', 'tahoe-day-night-dynamic', 'eagle-waterfall', 'wave', 'wave-2', 'cafe']);
 });
 
 test('search matches names, places and release names', () => {

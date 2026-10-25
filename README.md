@@ -3,6 +3,7 @@
 Every Mac wallpaper in one place, in a page that looks like a macOS window: the macOS aerials,
 the current Desktop Pictures, Apple's extra wallpapers and an archive going back to Mac OS X 10.0.
 Browse by category or by macOS release, preview with Quick Look (double-click or Space) and download.
+Every wallpaper has a share link (Quick Look › Copy Link, e.g. `…/mac-wallpapers/#macos-tahoe`) that opens straight into it.
 
 **Live site:** https://felixgoff.github.io/mac-wallpapers/
 

@@ -1,7 +1,7 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import { items, cats, catName, counts } from './lib/data.js';
-  import { visibleItems, groupItems } from './lib/group.js';
+  import { items, cats, catName, counts, byId } from './lib/data.js';
+  import { visibleItems, groupItems, inCategory } from './lib/group.js';
   import { ICONS } from './lib/icons.js';
   import { toast } from './lib/downloads.svelte.js';
   import Tile from './lib/Tile.svelte';
@@ -33,7 +33,23 @@
   };
   $effect(layout);
   const settle = () => requestAnimationFrame(() => requestAnimationFrame(() => (animated = true)));
-  onMount(settle);
+  onMount(() => { settle(); openFromLink(); });
+
+  // Share links: …/#macos-tahoe opens that wallpaper's Quick Look; the address follows what's open
+  async function openFromLink() {
+    const d = byId.get(decodeURIComponent(location.hash.slice(1)));
+    if (!d) return closeQL();
+    if (!inCategory(d, cat) || !visible.includes(d)) { cat = d.c; q = ''; }
+    await tick();
+    tileEl(d.i)?.scrollIntoView({ block: 'center' });
+    openQL(d.i);
+  }
+  $effect(() => {
+    const d = qlOpen && selected != null ? items[selected] : null;
+    const hash = d ? '#' + d.id : '';
+    if (location.hash !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
+    document.title = d ? `${d.n} — Mac Wallpapers` : 'Mac Wallpapers';
+  });
   function relayout() { animated = false; layout(); settle(); }
 
   function pick(c) {
@@ -106,7 +122,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onkey} onresize={relayout} />
+<svelte:window onkeydown={onkey} onresize={relayout} onhashchange={openFromLink} />
 
 {#snippet icon(name)}
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">{@html ICONS[name] ?? ICONS.all}</svg>
