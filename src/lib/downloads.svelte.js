@@ -12,8 +12,12 @@ export function say(msg, ms = 2400) {
   timer = setTimeout(() => (toast.show = false), ms);
 }
 
+// Only Safari trusts the certificate of Apple's aerial server; other browsers fetch its videos through a proxy
+export const SAFARI = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Firefox/.test(navigator.userAgent);
+const apple = u => !SAFARI && u.startsWith('https://sylvan.apple.com/') ? 'https://dry-dawn-9e3c.felixmgoff.workers.dev/' + u : u;
+
 // Downloads stream through fetch so the badge can show real progress. If the browser can't
-// fetch (Chrome doesn't trust Apple's aerial server certificate), the next click just follows the link.
+// fetch, the next click just follows the link.
 export const jobs = new SvelteMap(); // item index -> { state: 'loading'|'done', p, got, total, ctrl }
 let fetchBroken = false;
 
@@ -35,7 +39,7 @@ async function download(d) {
   const j = $state({ state: 'loading', p: null, got: 0, total: 0, ctrl: new AbortController() });
   jobs.set(d.i, j);
   try {
-    const res = await fetch(d.url, { signal: j.ctrl.signal });
+    const res = await fetch(apple(d.url), { signal: j.ctrl.signal });
     if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
     j.total = +res.headers.get('content-length') || 0;
     say(`Downloading “${d.n}”${j.total ? ` — ${mb(j.total)}` : ''}`);
@@ -81,7 +85,7 @@ async function buildPackage(d, mode) {
     const videos = [];
     let got = 0, last = 0;
     for (const part of parts) {
-      const res = await fetch(part.u, { signal: j.ctrl.signal });
+      const res = await fetch(apple(part.u), { signal: j.ctrl.signal });
       if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
       const reader = res.body.getReader(), chunks = [];
       let crc = 0, size = 0;
@@ -110,8 +114,7 @@ async function buildPackage(d, mode) {
   } catch (err) {
     jobs.delete(key);
     if (err.name === 'AbortError') return say(`Stopped building ${what}`);
-    say(parts.some(p => p.u.includes('sylvan.apple.com')) ? 'This browser can’t download Apple’s videos — open this page in Safari on a Mac'
-      : `Couldn’t download ${what} — try again`, 7000);
+    say(`Couldn’t download ${what} — try again`, 7000);
   }
 }
 

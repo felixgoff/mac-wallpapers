@@ -21,7 +21,7 @@ a README) that follows the time of day:
 - **Still dynamic wallpapers** (Tahoe, Sonoma, Big Sur, The Lake, hello, …): light/dark or dawn/day/dusk/night
   images that the page loads from the web while it runs, so the package is tiny and builds in any browser.
 - **Aerial sets** filmed at several times of day (Tahoe, Golden Gate, Sequoia): Apple's videos go inside the
-  package, which needs Safari on a Mac (Chrome doesn't trust Apple's video server); copy the zip to your PC.
+  package; copy the zip to your PC.
 
 Grid, Motion, Iridescence and Macintosh have no public light/dark images, so they don't get the button.
 
@@ -62,7 +62,8 @@ All wallpapers are © Apple Inc. This is an unofficial fan project and isn't aff
 
 ## Known limits
 
-- Apple's aerial server uses a certificate Chrome doesn't trust, so aerial videos download in Safari only. Other browsers
-  preview an 8-second low-res clip the site hosts (`public/clips/`) instead.
+- Only Safari trusts the certificate of Apple's aerial server. Other browsers download aerials through a Cloudflare
+  Worker proxy (`dry-dawn-9e3c.felixmgoff.workers.dev`, see `src/lib/downloads.svelte.js`) and preview an 8-second
+  low-res clip the site hosts (`public/clips/`).
 - Wallpaper Engine packages contain Apple's original 4K HEVC videos; they're untested in Wallpaper Engine itself, and some PCs need Microsoft's HEVC Video Extensions to play them.
 - macOS versions for archive items follow the album's order and are best guesses in places.

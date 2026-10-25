@@ -108,7 +108,7 @@ def animated(name, land, port, img, c, s, v):
                 we=dict(video=True, parts=[dict(t=t, h=h, u=u) for t, h, u in zip(('Light', 'Dark'), (7, 19), land)]),
                 portrait=dict(size=sum(map(size, port)), parts=[dict(t=t, u=u) for t, u in zip(('Light', 'Dark'), port)]),
                 note=f'{name}’s animated wallpaper and screen saver: light by day, dark at night. Download saves the landscape'
-                     ' videos, Portrait the portrait ones (best in Safari on a Mac, as Chrome doesn’t trust Apple’s video server).')
+                     ' videos, Portrait the portrait ones.')
 
 
 var = {(x['variant']['appearance'], x['variant']['orientation']): x for x in items if x.get('variant')}
@@ -171,8 +171,7 @@ for sub in dict.fromkeys(x['s'] for x in items):
         size=sum(map(remote_size, (x['url'] for x in parts))),
         we=dict(video=True, parts=[dict(t=t, h=START[t], u=x['url']) for t, x in zip(times, parts)]),
         note='Apple’s ' + ', '.join(f'{t} from {START[t]:02}:00' for t in times)
-             + ' aerials as one set. Download saves the videos; Wallpaper Engine builds one wallpaper that follows the clock'
-             + ' (both need Safari on a Mac, as Chrome doesn’t trust Apple’s video server).'))
+             + ' aerials as one set. Download saves the videos; Wallpaper Engine builds one wallpaper that follows the clock.'))
 
 # ---- Still wallpapers ----------------------------------------------------------
 # macOS lists them in /System/Library/Desktop Pictures as .madesktop stubs whose full image
@@ -309,8 +308,8 @@ for x in items:
         x['workshop'] = [dict(l=l, u=f'https://steamcommunity.com/sharedfiles/filedetails/?id={i}') for l, i in WORKSHOP[x['n']]]
 assert sum('workshop' in x for x in items) == len(WORKSHOP)
 
-# Short low-res clips of Apple's aerials, hosted on the site: Quick Look falls back to them in browsers
-# that don't trust sylvan.apple.com (Chrome). ffmpeg reads only the first seconds of each 4K video.
+# Short low-res clips of Apple's aerials, hosted on the site: Quick Look previews with them in browsers
+# other than Safari. ffmpeg reads only the first seconds of each 4K video.
 CLIPS = os.path.join(ROOT, 'public', 'clips')
 os.makedirs(CLIPS, exist_ok=True)
 

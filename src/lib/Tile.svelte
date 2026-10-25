@@ -56,18 +56,18 @@
     {#if d.kind !== 'builtin'}
       {@render button('', d.url, ARROW, 1.8, job, `Download “${d.n}”`,
         job?.state === 'loading' ? `Downloading “${d.n}”${job.total ? ` — ${mb(job.got)} of ${mb(job.total)}` : ''}. Click to stop.`
-          : d.kind === 'set' ? `Download the “${d.n}” videos (${mb(d.size)}, best in Safari)`
+          : d.kind === 'set' ? `Download the “${d.n}” videos (${mb(d.size)})`
           : `Download “${d.n}”${d.kind === 'aerial' ? ' (4K video)' : ''}`, onDownloadClick)}
     {/if}
     {#if d.portrait}
       {@render button('pt', '#portrait', PORTRAIT, 1.6, ptJob, `Download ${d.n} for portrait screens`,
         ptJob?.state === 'loading' ? `Downloading the portrait videos — ${mb(ptJob.got)} of ${mb(ptJob.total)}. Click to stop.`
-          : `Portrait: the light and dark videos for portrait screens (${mb(d.portrait.size)}, best in Safari)`, onPortrait)}
+          : `Portrait: the light and dark videos for portrait screens (${mb(d.portrait.size)})`, onPortrait)}
     {/if}
     {#if d.we}
       {@render button('we', '#wallpaper-engine', WE_ICON, 1.6, weJob, `Wallpaper Engine: ${d.n}`,
         weJob?.state === 'loading' ? `Building for Wallpaper Engine${weJob.total ? ` — ${mb(weJob.got)} of ${mb(weJob.total)}` : ''}. Click to stop.`
-          : `Wallpaper Engine: a package that follows the time of day${d.we.video ? ` (${mb(d.size)} of videos, best in Safari)` : ''}`, onWallpaperEngine)}
+          : `Wallpaper Engine: a package that follows the time of day${d.we.video ? ` (${mb(d.size)} of videos)` : ''}`, onWallpaperEngine)}
     {/if}
   </div>
   <div class="name" title={d.n}>{d.n}</div>

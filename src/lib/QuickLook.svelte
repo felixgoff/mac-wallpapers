@@ -1,5 +1,5 @@
 <script>
-  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say } from './downloads.svelte.js';
+  import { SAFARI, jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say } from './downloads.svelte.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
   import { ARROW, WE_ICON, PORTRAIT, WORKSHOP, LINK } from './icons.js';
@@ -29,15 +29,16 @@
     catch { prompt('Copy this link:', url); } // clipboard can be blocked (e.g. insecure contexts)
   }
 
-  // Stream the real video while open; the blurred thumbnail and spinner hold its place until it plays
+  // Stream the real video while open; the blurred thumbnail and spinner hold its place until it plays.
+  // Other browsers preview Apple's aerials with the site's short clip: Firefox can't play HEVC, and it spares the proxy.
   $effect(() => {
     if (!video) return;
     playing = failed = false;
-    if (open && d?.video) { video.src = d.video; video.play().catch(() => {}); }
+    if (open && d?.video) { video.src = SAFARI ? d.video : d.clip ?? d.video; video.play().catch(() => {}); }
     else { video.pause(); video.removeAttribute('src'); video.load(); }
   });
 
-  // Browsers that don't trust Apple's video server (Chrome) get the short clip the site hosts instead
+  // If the video can't load anyway, fall back to the clip
   function onVideoError() {
     const src = video.getAttribute('src');
     if (!src) return;
