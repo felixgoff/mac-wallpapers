@@ -13,3 +13,5 @@ export const ICONS = {
   'macOS Archive': '<rect x="1.8" y="2.5" width="12.4" height="3.2" rx="1"/><path d="M2.8 5.7v6.6a1.2 1.2 0 0 0 1.2 1.2h8a1.2 1.2 0 0 0 1.2-1.2V5.7M6.3 8.6h3.4"/>',
 };
 export const ARROW = '<path d="M8 2.5v8M4.5 7.5 8 11l3.5-3.5M3 13.5h10"/>';
+// Wallpaper Engine: a screen whose picture changes from sun to moon
+export const WE_ICON = '<rect x="1.8" y="2.5" width="12.4" height="8.6" rx="1.4"/><path d="M6 13.8h4M8 11.1v2.7"/><circle cx="6" cy="6.8" r="1.6"/><path d="M11.6 5.2a1.9 1.9 0 1 0 0 3.2 1.6 1.6 0 0 1 0-3.2z" fill="currentColor" stroke="none"/>';

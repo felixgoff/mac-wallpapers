@@ -1,11 +1,12 @@
 <script>
-  import { jobs, onDownloadClick } from './downloads.svelte.js';
+  import { jobs, onDownloadClick, onWallpaperEngine, weKey } from './downloads.svelte.js';
   import { patSize, mb } from './versions.js';
-  import { ARROW } from './icons.js';
+  import { ARROW, WE_ICON } from './icons.js';
 
   let { d, order, selected, onselect, onopen } = $props();
   let loaded = $state(false);
   const job = $derived(jobs.get(d.i));
+  const weJob = $derived(jobs.get(weKey(d)));
 
   // An image already in the cache can finish before Svelte attaches onload
   const ready = img => { if (img.complete && img.naturalWidth) loaded = true; };
@@ -37,7 +38,7 @@
       class:done={job?.state === 'done'} style:--p={job?.p ?? 0}
       title={job?.state === 'loading'
         ? `Downloading “${d.n}”${job.total ? ` — ${mb(job.got)} of ${mb(job.total)}` : ''}. Click to stop.`
-        : d.kind === 'we' ? `Build “${d.n}” for Wallpaper Engine (${mb(d.size)}, best in Safari)`
+        : d.kind === 'set' ? `Download the “${d.n}” videos (${mb(d.size)}, best in Safari)`
         : `Download “${d.n}”${d.kind === 'aerial' ? ' (4K video)' : ''}`}
       aria-label="Download {d.n}"
       onclick={e => { e.stopPropagation(); onDownloadClick(e, d); }}>
@@ -46,6 +47,18 @@
       <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
       <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
     </a>
+    {/if}
+    {#if d.we}
+      <a class="dl we" href="#wallpaper-engine" aria-label="Wallpaper Engine: {d.n}"
+        class:loading={weJob?.state === 'loading'} class:done={weJob?.state === 'done'} style:--p={weJob?.p ?? 0}
+        title={weJob?.state === 'loading' ? `Building for Wallpaper Engine${weJob.total ? ` — ${mb(weJob.got)} of ${mb(weJob.total)}` : ''}. Click to stop.`
+          : `Wallpaper Engine: a package that follows the time of day${d.we.video ? ` (${mb(d.size)} of videos, best in Safari)` : ''}`}
+        onclick={e => { e.stopPropagation(); onWallpaperEngine(e, d); }}>
+        <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html WE_ICON}</svg>
+        <svg class="ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>
+        <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
+        <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
+      </a>
     {/if}
   </div>
   <div class="name" title={d.n}>{d.n}</div>

@@ -1,20 +1,22 @@
 <script>
-  import { jobs, onDownloadClick, onAltClick } from './downloads.svelte.js';
+  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, weKey } from './downloads.svelte.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
-  import { ARROW } from './icons.js';
+  import { ARROW, WE_ICON } from './icons.js';
 
   let { d, open, list, onselect, onclose } = $props();
   let stage = $state(), video = $state();
   let playing = $state(false), failed = $state(false);
   const job = $derived(d && jobs.get(d.i));
   const sec = $derived(d ? section(d) : '');
-  const what = $derived(!d ? '' : d.kind === 'aerial' ? '4K video' : d.kind === 'we' ? `Dynamic aerial · ${d.parts.length} videos`
+  const what = $derived(!d ? '' : d.kind === 'aerial' ? '4K video' : d.kind === 'set' ? `Dynamic aerial · ${d.we.parts.length} videos`
     : d.anim ? 'Animated wallpaper'
     : d.kind === 'builtin' ? 'Live wallpaper' : d.pattern ? 'Pattern' : d.dyn ? 'Dynamic picture' : 'Picture');
-  const we = $derived(d?.kind === 'we');
-  const label = $derived(job?.state === 'loading' ? (job.p == null ? 'Downloading…' : `${we ? 'Building' : 'Downloading'} ${Math.round(job.p * 100)}%`)
-    : job?.state === 'done' ? (we ? 'Saved' : 'Downloaded') : we ? 'Wallpaper Engine' : 'Download');
+  const label = $derived(job?.state === 'loading' ? (job.p == null ? 'Downloading…' : `Downloading ${Math.round(job.p * 100)}%`)
+    : job?.state === 'done' ? 'Downloaded' : d?.kind === 'set' ? 'Download videos' : 'Download');
+  const weJob = $derived(d && jobs.get(weKey(d)));
+  const weLabel = $derived(weJob?.state === 'loading' ? `Building ${Math.round((weJob.p ?? 0) * 100)}%`
+    : weJob?.state === 'done' ? 'Saved' : 'Wallpaper Engine');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Stream the real video while open; the blurred thumbnail and spinner hold its place until it plays
@@ -69,6 +71,14 @@
         <div class="ql-title" id="ql-title">
           {d.n}<small>{VLABEL[d.v]} · {sec && sec !== catName(d.c) ? sec + ' · ' : ''}{catName(d.c)} · {what}{d.size ? ' · ' + mb(d.size) : ''}</small>
         </div>
+        {#if d.we}
+          <a class="btn alt-btn" href="#wallpaper-engine" style:--p={weJob?.p ?? 0} onclick={e => onWallpaperEngine(e, d)}
+            title="A Wallpaper Engine package that follows the time of day">
+            <span class="fill"></span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html WE_ICON}</svg>
+            <span>{weLabel}</span>
+          </a>
+        {/if}
         {#if d.kind === 'builtin'}
           <span class="btn off">Built into macOS</span>
         {:else}

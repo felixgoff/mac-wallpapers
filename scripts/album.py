@@ -22,7 +22,7 @@ SKIP = {0, 11, 12, 142, 312, 536, 537, 538, 539, 540, 548, 551, 552, 553, 554, 5
 VFIX = {235: '10.9', 259: '10.7', 550: 'other'}
 # Copies of wallpapers already on the page: (album index, page wallpaper, label) -> extra download on it
 COPIES = {6: ('grid magenta', 'Space Gray (PNG)'), 7: ('grid green', 'Silver (PNG)'), 8: ('ventura graphic', 'HEIC'),
-          53: ('catalina', 'Setup Assistant (HEIC)')}
+          53: ('big sur', 'Setup Assistant (HEIC)')}
 
 NAMES = {
     'black_unity_22_wallpaper_mac': 'Unity Lights (Black Unity 2022)', 'Appearance': 'Appearance (Big Sur)',
@@ -160,7 +160,7 @@ def entries(existing):
                 if parent:
                     attach(parent, label, link)
             continue
-        parent = find({'appearance dynamic': 'catalina'}.get(key, key))  # the Setup Assistant copy of Catalina
+        parent = find({'appearance dynamic': 'big sur'}.get(key, key))  # the Setup Assistant copy of Big Sur
         lst.sort(key=lambda f: f[0])
         if not parent and key == norm('Mojave (Dynamic)'):  # the album only has Mojave's 16 frames
             n, link, k, base, w, h = lst[0]

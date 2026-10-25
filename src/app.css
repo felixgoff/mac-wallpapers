@@ -225,6 +225,9 @@ body {
 .dynb { position: absolute; left: 7px; bottom: 7px; z-index: 1; width: 15px; height: 15px; border-radius: 50%; pointer-events: none;
   border: 1.5px solid #fff; background: linear-gradient(90deg, #fff 50%, transparent 50%); box-shadow: 0 0 0 .5px rgba(0,0,0,.2), 0 1px 3px rgba(0,0,0,.3); }
 .btn.off { background: var(--field); color: var(--text2); box-shadow: none; }
+.btn.alt-btn { background: var(--field); color: var(--text); box-shadow: inset 0 0 0 .5px var(--hairline); }
+.btn.alt-btn .fill { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.dl.we { right: 36px; }
 .ql-img video { opacity: 0; transition: opacity .6s var(--ease); }
 .ql-img.playing video { opacity: 1; }
 .spinner { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; margin: -14px; transition: opacity .3s; }

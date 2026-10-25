@@ -37,6 +37,22 @@ def slices(key, srcs, w=428, h=268):
     return 'thumbs/' + os.path.basename(out)
 
 
+def remote_size(url):
+    head = subprocess.run(['curl', '-sIL', url], capture_output=True, text=True, check=True).stdout
+    return int(re.findall(r'(?im)^content-length:\s*(\d+)', head)[-1])
+
+
+def luma(url, key):
+    """Average brightness (0–255) of a tiny copy of an image, to tell night frames from day ones."""
+    p = os.path.join(CACHE, 'luma', slug(key) + '.img')
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    if not os.path.exists(p):
+        subprocess.run(['curl', '-sfL', '--retry', '4', '--retry-all-errors', '-o', p, url], check=True)
+    px = subprocess.run(['ffmpeg', '-nostdin', '-loglevel', 'error', '-i', p, '-vf', 'scale=1:1,format=gray',
+                         '-f', 'rawvideo', '-'], capture_output=True, check=True).stdout
+    return px[0]
+
+
 def words(key, prefix):
     s = re.sub('^' + prefix + '(Description|Cities(?=[A-Z]))?', '', key)
     s = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', s)
@@ -95,11 +111,6 @@ for x in items:
         x['n'] = f"{x['n']} {seen[x['n']]}"
 json.dump(aindex, open(INDEX, 'w'))
 
-def remote_size(url):
-    head = subprocess.run(['curl', '-sIL', url], capture_output=True, text=True, check=True).stdout
-    return int(re.findall(r'(?im)^content-length:\s*(\d+)', head)[-1])
-
-
 # Aerial sets filmed at several times of day (Tahoe Morning/Day/Evening/Night, …) become one dynamic
 # wallpaper that the site packages for Wallpaper Engine; the hour each video starts playing:
 START = {'Sunrise': 5, 'Morning': 6, 'Day': 10, 'Sunset': 17, 'Evening': 18, 'Night': 21}
@@ -112,10 +123,12 @@ for sub in dict.fromkeys(x['s'] for x in items):
     first = items.index(parts[0])
     items.insert(first, dict(
         n=f'{sub} (Dynamic)', img=slices(f'{sub} wallpaper engine', [os.path.join(ROOT, 'public', x['img']) for x in parts]),
-        url='', c=parts[0]['c'], s=sub, v=parts[0]['v'], kind='we', anim=True, dyn=True, video=parts[0]['url'],
-        size=sum(map(remote_size, (x['url'] for x in parts))), parts=[dict(t=t, h=START[t], u=x['url']) for t, x in zip(times, parts)],
-        note='One wallpaper that follows the time of day — ' + ', '.join(f'{t} from {START[t]:02}:00' for t in times)
-             + '. Builds a Wallpaper Engine package from Apple’s videos; use Safari on a Mac, then copy the zip to your PC.'))
+        url='', c=parts[0]['c'], s=sub, v=parts[0]['v'], kind='set', anim=True, dyn=True, video=parts[0]['url'],
+        size=sum(map(remote_size, (x['url'] for x in parts))),
+        we=dict(video=True, parts=[dict(t=t, h=START[t], u=x['url']) for t, x in zip(times, parts)]),
+        note='Apple’s ' + ', '.join(f'{t} from {START[t]:02}:00' for t in times)
+             + ' aerials as one set. Download saves the videos; Wallpaper Engine builds one wallpaper that follows the clock'
+             + ' (both need Safari on a Mac, as Chrome doesn’t trust Apple’s video server).'))
 
 # ---- Still wallpapers ----------------------------------------------------------
 # macOS lists them in /System/Library/Desktop Pictures as .madesktop stubs whose full image
@@ -152,13 +165,23 @@ for f in os.listdir(DP):
                        s=family(base), v=next((v for p, v in STILL_V if re.search(p, base)), 'other'), kind='still',
                        dyn=dyn, size=a['_DownloadSize'], how='zip'))
 
-# Live wallpapers that macOS draws itself (no file to download); shown so the Dynamic list is complete
+# Tahoe and Sequoia ship as live extensions, not files; their light and dark images come from the
+# LAYTAT/macOS-Wallpapers collection on GitHub. Macintosh is drawn live and has no image to offer.
+LAYTAT = 'https://raw.githubusercontent.com/LAYTAT/macOS-Wallpapers/main/'
 EXT = '/System/Library/ExtensionKit/Extensions'
-SEQ = f'{EXT}/WallpaperSequoiaExtension.appex/Contents/Resources'
-for name, img in [('Sequoia', slices('Sequoia', [f'{SEQ}/thumbnail light.heic', f'{SEQ}/thumbnail dark.heic'])),
-                  ('Macintosh', thumb('/System/Library/Wallpapers/.thumbnails/Macintosh.heic', 'builtin-Macintosh'))]:
-    stills.append(dict(n=name, img=img, url='', c='pictures', s='', v='15', kind='builtin',
-                       dyn=True, note=f'A live wallpaper built into macOS Sequoia and later. Choose it in System Settings › Wallpaper; Apple doesn’t offer it as a file.'))
+for name, v, light, dark, thumbs in [
+        ('Tahoe', '26', '26-Tahoe-Light-6K.png', '26-Tahoe-Dark-6K.png',
+         [f'{EXT}/NeptuneOneWallpaper.appex/Contents/Resources/Tahoe{m}.heic' for m in ('Light', 'Dark')]),
+        ('Sequoia', '15', '15-Sequoia-Light-6K.jpg', '15-Sequoia-Dark-6K.jpg',
+         [f'{EXT}/WallpaperSequoiaExtension.appex/Contents/Resources/thumbnail {m}.heic' for m in ('light', 'dark')])]:
+    stills.append(dict(n=name, img=slices(name, thumbs), url=LAYTAT + light, c='pictures', s='', v=v, kind='still',
+                       dyn=True, size=remote_size(LAYTAT + light), how='fetch', ext=os.path.splitext(light)[1],
+                       alts=[dict(l='Dark', u=LAYTAT + dark, size=remote_size(LAYTAT + dark))],
+                       note=f'macOS {name}’s default wallpaper (light; dark is an extra download), via LAYTAT/macOS-Wallpapers on GitHub.',
+                       post='https://github.com/LAYTAT/macOS-Wallpapers'))
+stills.append(dict(n='Macintosh', img=thumb('/System/Library/Wallpapers/.thumbnails/Macintosh.heic', 'builtin-Macintosh'),
+                   url='', c='pictures', s='', v='15', kind='builtin', dyn=True,
+                   note='A live wallpaper built into macOS Sequoia and later. Choose it in System Settings › Wallpaper; Apple doesn’t offer it as a file.'))
 
 # Keep each family together, ordered the way System Settings lists them
 first = {}
@@ -199,11 +222,43 @@ for k in (3, 8, 12, 15):
 moj['img'] = slices('Mojave Dynamic', srcs)
 cats.append(dict(id='archive', n='macOS Archive', g='Pictures'))
 
+# ---- Wallpaper Engine frames for still dynamic wallpapers ------------------------
+# The package's page loads these images from the web while it runs (Google Photos doesn't allow
+# in-page downloads), switching by the clock: light/dark, or dawn/day/dusk/night.
+FROM_LAYTAT = {'Sonoma': ('14-Sonoma-Light.jpg', '14-Sonoma-Dark.jpg'), 'Monterey Graphic': ('12-Light.jpg', '12-Dark.jpg'),
+               'Ventura Graphic': ('13-Ventura-Light.jpg', '13-Ventura-Dark.jpg'),
+               'Big Sur Graphic': ('11-0-Color-Day.jpg', '11-0-Big-Sur-Color-Night.jpg')}
+TWO, FOUR = (('Day', 7), ('Night', 19)), (('Dawn', 6), ('Day', 9), ('Dusk', 17), ('Night', 20))
+bag = {x['n']: x['url'] for x in items if x['c'] == 'extras'}
+for x in items:
+    if not x.get('dyn') or x['kind'] in ('builtin', 'set'):
+        continue
+    if x['n'] in FROM_LAYTAT:
+        urls = [LAYTAT + f for f in FROM_LAYTAT[x['n']]]
+    elif x['n'] in ('Tahoe', 'Sequoia'):
+        urls = [x['url'], x['alts'][0]['u']]
+    elif x['n'].startswith('Tahoe Day/Night'):
+        urls = [bag['Tahoe Day'], bag['Tahoe Night']]
+    elif x['n'].startswith('Tahoe Time of Day'):
+        urls = [bag[f'Tahoe {t}'] for t in ('Dawn', 'Day', 'Dusk', 'Night')]
+    else:  # album frames (Frame N) or light/dark copies, ordered darkest (night) to brightest (day)
+        frames = [a['u'] for a in x.get('alts', []) if a['l'].startswith(('Frame', 'Light', 'Dark'))]
+        if x['n'] == 'Mojave Dynamic':
+            frames = [x['url']] + frames
+        frames = [u[:-len('=d')] + '=s0' if u.endswith('=d') else u for u in frames]  # =s0 serves HEIC as JPEG
+        if len(frames) < 2:
+            continue
+        frames.sort(key=lambda u: luma(u.removesuffix('=s0') + '=w32', x['n'] + u[-40:]))
+        n = len(frames)
+        urls = [frames[-1], frames[0]] if n < 4 else [frames[round(n * .45)], frames[-1], frames[round(n * .65)], frames[0]]
+    sched = TWO if len(urls) == 2 else FOUR
+    x['we'] = dict(video=False, parts=[dict(t=t, h=h, u=u) for (t, h), u in zip(sched, urls)])
+
 # Self-check: everything must work from a public web page
 VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
 for x in items:
     assert x['v'] in VERSIONS, x
-    assert x['url'].startswith('https://') or x['kind'] in ('builtin', 'we'), x
+    assert x['url'].startswith('https://') or x['kind'] in ('builtin', 'set'), x
     assert x['img'].startswith(('https://', 'thumbs/')), x
     assert not x['img'].startswith('thumbs/') or os.path.exists(os.path.join(ROOT, 'public', x['img'])), x
 assert {x['c'] for x in items} == {c['id'] for c in cats}

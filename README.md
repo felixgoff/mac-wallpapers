@@ -11,11 +11,16 @@ Built with [Svelte](https://svelte.dev) and [Vite](https://vite.dev) as a static
 
 ## Wallpaper Engine packages
 
-Apple films some aerials at several times of day (Tahoe Morning/Day/Evening/Night, Golden Gate, Sequoia)
-but never combines them. Each such set has a "(Dynamic)" tile whose **Wallpaper Engine** button downloads
-the videos and builds a ready-to-import Wallpaper Engine web wallpaper (`project.json`, a page that plays
-the right video for the clock with crossfades, a preview and a README). It's built in the browser, so it
-needs Safari on a Mac (Chrome doesn't trust Apple's video server); copy the zip to your PC and follow the README.
+Dynamic wallpapers have a **Wallpaper Engine** button next to the normal download. It builds a ready-to-import
+Wallpaper Engine web wallpaper (`project.json`, a page that switches with the clock and crossfades, a preview and
+a README) that follows the time of day:
+
+- **Still dynamic wallpapers** (Tahoe, Sonoma, Big Sur, The Lake, hello, …): light/dark or dawn/day/dusk/night
+  images that the page loads from the web while it runs, so the package is tiny and builds in any browser.
+- **Aerial sets** filmed at several times of day (Tahoe, Golden Gate, Sequoia): Apple's videos go inside the
+  package, which needs Safari on a Mac (Chrome doesn't trust Apple's video server); copy the zip to your PC.
+
+Grid, Motion, Iridescence and Macintosh have no public light/dark images, so they don't get the button.
 
 ## Develop
 
@@ -48,6 +53,7 @@ python3 scripts/build_data.py    # writes src/data.json and public/thumbs/
 - **Apple Extras:** Apple's own wallpapers as republished by [Basic Apple Guy](https://basicappleguy.com) — some are
   frames from Apple's videos that he upscaled; each one says so and links to his post.
 - **macOS Archive:** the "macOS Wallpapers" Google Photos album shared by Евгений Богун.
+- **Tahoe, Sequoia and other light/dark images:** [LAYTAT/macOS-Wallpapers](https://github.com/LAYTAT/macOS-Wallpapers) on GitHub.
 
 All wallpapers are © Apple Inc. This is an unofficial fan project and isn't affiliated with Apple.
 

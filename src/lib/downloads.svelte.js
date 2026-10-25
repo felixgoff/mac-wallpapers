@@ -61,17 +61,23 @@ async function download(d) {
   }
 }
 
-// Downloads every time-of-day video of an aerial set and packs them into a Wallpaper Engine wallpaper
-async function buildPackage(d) {
-  const cur = jobs.get(d.i);
+// Wallpaper Engine work is tracked separately from the normal download of the same wallpaper
+export const weKey = d => `${d.i}:we`;
+
+// mode 'we': a Wallpaper Engine package (videos inside for aerial sets, web images for stills);
+// mode 'videos': the raw videos of an aerial set, zipped
+async function buildPackage(d, mode) {
+  const key = mode === 'we' ? weKey(d) : d.i, withVideos = mode === 'videos' || d.we.video;
+  const cur = jobs.get(key);
   if (cur?.state === 'loading') return cur.ctrl.abort();
   const j = $state({ state: 'loading', p: 0, got: 0, total: d.size, ctrl: new AbortController() });
-  jobs.set(d.i, j);
+  jobs.set(key, j);
+  const what = mode === 'we' ? `“${d.n}” for Wallpaper Engine` : `“${d.n}” videos`;
   try {
-    say(`Building “${d.n}” for Wallpaper Engine — downloading ${mb(d.size)} of Apple’s videos…`, 6000);
+    if (withVideos) say(`Building ${what} — downloading ${mb(d.size)} of Apple’s videos…`, 6000);
     const videos = [];
     let got = 0, last = 0;
-    for (const part of d.parts) {
+    for (const part of withVideos ? d.we.parts : []) {
       const res = await fetch(part.u, { signal: j.ctrl.signal });
       if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
       const reader = res.body.getReader(), chunks = [];
@@ -88,22 +94,32 @@ async function buildPackage(d) {
       }
       videos.push({ name: videoName(part), blob: new Blob(chunks), size, crc });
     }
-    const preview = new Uint8Array(await (await fetch(d.img)).arrayBuffer());
-    saveBlob(zip(packageFiles(d, videos, preview)), fileName(`${d.n} (Wallpaper Engine)`, '.zip'));
+    const name = `${d.n} (${mode === 'we' ? 'Wallpaper Engine' : 'videos'})`;
+    if (mode === 'we') {
+      const preview = new Uint8Array(await (await fetch(d.img)).arrayBuffer());
+      saveBlob(zip(packageFiles(d, videos, preview)), fileName(name, '.zip'));
+    } else {
+      saveBlob(zip(videos.map(v => ({ name: `${d.n}/${v.name}`, data: v.blob, size: v.size, crc: v.crc }))), fileName(name, '.zip'));
+    }
     Object.assign(j, { state: 'done', p: 1, got });
-    say(`Saved “${d.n} (Wallpaper Engine).zip” — see the README inside to add it`, 6000);
-    setTimeout(() => jobs.get(d.i) === j && jobs.delete(d.i), 2200);
+    say(mode === 'we' ? `Saved “${name}.zip” — see the README inside to add it` : `Saved “${name}.zip”`, 6000);
+    setTimeout(() => jobs.get(key) === j && jobs.delete(key), 2200);
   } catch (err) {
-    jobs.delete(d.i);
-    if (err.name === 'AbortError') return say(`Stopped building “${d.n}”`);
-    say('This browser can’t download Apple’s videos — open this page in Safari on a Mac to build the package', 7000);
+    jobs.delete(key);
+    if (err.name === 'AbortError') return say(`Stopped building ${what}`);
+    say('This browser can’t download Apple’s videos — open this page in Safari on a Mac', 7000);
   }
 }
 
+export function onWallpaperEngine(e, d) {
+  e.preventDefault();
+  buildPackage(d, 'we');
+}
+
 export function onDownloadClick(e, d) {
-  if (d.kind === 'we') {
+  if (d.kind === 'set') {
     e.preventDefault();
-    return buildPackage(d);
+    return buildPackage(d, 'videos');
   }
   if (d.kind === 'still' && d.how !== 'fetch') {
     // These hosts don't allow in-page downloads; the link downloads the file itself
