@@ -37,6 +37,7 @@
       class:done={job?.state === 'done'} style:--p={job?.p ?? 0}
       title={job?.state === 'loading'
         ? `Downloading “${d.n}”${job.total ? ` — ${mb(job.got)} of ${mb(job.total)}` : ''}. Click to stop.`
+        : d.kind === 'we' ? `Build “${d.n}” for Wallpaper Engine (${mb(d.size)}, best in Safari)`
         : `Download “${d.n}”${d.kind === 'aerial' ? ' (4K video)' : ''}`}
       aria-label="Download {d.n}"
       onclick={e => { e.stopPropagation(); onDownloadClick(e, d); }}>

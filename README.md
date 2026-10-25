@@ -9,6 +9,14 @@ Browse by category or by macOS release, preview with Quick Look (double-click or
 Built with [Svelte](https://svelte.dev) and [Vite](https://vite.dev) as a static site. Every push to
 `main` is tested, built and deployed to GitHub Pages by `.github/workflows/deploy.yml`.
 
+## Wallpaper Engine packages
+
+Apple films some aerials at several times of day (Tahoe Morning/Day/Evening/Night, Golden Gate, Sequoia)
+but never combines them. Each such set has a "(Dynamic)" tile whose **Wallpaper Engine** button downloads
+the videos and builds a ready-to-import Wallpaper Engine web wallpaper (`project.json`, a page that plays
+the right video for the clock with crossfades, a preview and a README). It's built in the browser, so it
+needs Safari on a Mac (Chrome doesn't trust Apple's video server); copy the zip to your PC and follow the README.
+
 ## Develop
 
 ```sh
@@ -46,4 +54,5 @@ All wallpapers are © Apple Inc. This is an unofficial fan project and isn't aff
 ## Known limits
 
 - Apple's aerial server uses a certificate Chrome doesn't trust, so aerial videos preview and download in Safari only.
+- Wallpaper Engine packages contain Apple's original 4K HEVC videos; they're untested in Wallpaper Engine itself, and some PCs need Microsoft's HEVC Video Extensions to play them.
 - macOS versions for archive items follow the album's order and are best guesses in places.

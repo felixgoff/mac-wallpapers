@@ -9,10 +9,12 @@
   let playing = $state(false), failed = $state(false);
   const job = $derived(d && jobs.get(d.i));
   const sec = $derived(d ? section(d) : '');
-  const what = $derived(!d ? '' : d.kind === 'aerial' ? '4K video' : d.anim ? 'Animated wallpaper'
+  const what = $derived(!d ? '' : d.kind === 'aerial' ? '4K video' : d.kind === 'we' ? `Dynamic aerial · ${d.parts.length} videos`
+    : d.anim ? 'Animated wallpaper'
     : d.kind === 'builtin' ? 'Live wallpaper' : d.pattern ? 'Pattern' : d.dyn ? 'Dynamic picture' : 'Picture');
-  const label = $derived(job?.state === 'loading' ? (job.p == null ? 'Downloading…' : `Downloading ${Math.round(job.p * 100)}%`)
-    : job?.state === 'done' ? 'Downloaded' : 'Download');
+  const we = $derived(d?.kind === 'we');
+  const label = $derived(job?.state === 'loading' ? (job.p == null ? 'Downloading…' : `${we ? 'Building' : 'Downloading'} ${Math.round(job.p * 100)}%`)
+    : job?.state === 'done' ? (we ? 'Saved' : 'Downloaded') : we ? 'Wallpaper Engine' : 'Download');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Stream the real video while open; the blurred thumbnail and spinner hold its place until it plays

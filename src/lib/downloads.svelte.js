@@ -1,5 +1,7 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { mb } from './versions.js';
+import { crc32, zip } from './zip.js';
+import { packageFiles, videoName } from './wallpaperEngine.js';
 
 export const toast = $state({ msg: '', show: false });
 let timer;
@@ -59,7 +61,50 @@ async function download(d) {
   }
 }
 
+// Downloads every time-of-day video of an aerial set and packs them into a Wallpaper Engine wallpaper
+async function buildPackage(d) {
+  const cur = jobs.get(d.i);
+  if (cur?.state === 'loading') return cur.ctrl.abort();
+  const j = $state({ state: 'loading', p: 0, got: 0, total: d.size, ctrl: new AbortController() });
+  jobs.set(d.i, j);
+  try {
+    say(`Building “${d.n}” for Wallpaper Engine — downloading ${mb(d.size)} of Apple’s videos…`, 6000);
+    const videos = [];
+    let got = 0, last = 0;
+    for (const part of d.parts) {
+      const res = await fetch(part.u, { signal: j.ctrl.signal });
+      if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+      const reader = res.body.getReader(), chunks = [];
+      let crc = 0, size = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        crc = crc32(value, crc);
+        size += value.length;
+        got += value.length;
+        const now = performance.now();
+        if (now - last > 120) { last = now; j.got = got; j.p = Math.min(got / d.size, 0.99); }
+      }
+      videos.push({ name: videoName(part), blob: new Blob(chunks), size, crc });
+    }
+    const preview = new Uint8Array(await (await fetch(d.img)).arrayBuffer());
+    saveBlob(zip(packageFiles(d, videos, preview)), fileName(`${d.n} (Wallpaper Engine)`, '.zip'));
+    Object.assign(j, { state: 'done', p: 1, got });
+    say(`Saved “${d.n} (Wallpaper Engine).zip” — see the README inside to add it`, 6000);
+    setTimeout(() => jobs.get(d.i) === j && jobs.delete(d.i), 2200);
+  } catch (err) {
+    jobs.delete(d.i);
+    if (err.name === 'AbortError') return say(`Stopped building “${d.n}”`);
+    say('This browser can’t download Apple’s videos — open this page in Safari on a Mac to build the package', 7000);
+  }
+}
+
 export function onDownloadClick(e, d) {
+  if (d.kind === 'we') {
+    e.preventDefault();
+    return buildPackage(d);
+  }
   if (d.kind === 'still' && d.how !== 'fetch') {
     // These hosts don't allow in-page downloads; the link downloads the file itself
     say(d.how === 'zip' ? `Downloading “${d.n}” — ${mb(d.size)} zip with a .heic inside`

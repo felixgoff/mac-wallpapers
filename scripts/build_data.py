@@ -95,6 +95,28 @@ for x in items:
         x['n'] = f"{x['n']} {seen[x['n']]}"
 json.dump(aindex, open(INDEX, 'w'))
 
+def remote_size(url):
+    head = subprocess.run(['curl', '-sIL', url], capture_output=True, text=True, check=True).stdout
+    return int(re.findall(r'(?im)^content-length:\s*(\d+)', head)[-1])
+
+
+# Aerial sets filmed at several times of day (Tahoe Morning/Day/Evening/Night, …) become one dynamic
+# wallpaper that the site packages for Wallpaper Engine; the hour each video starts playing:
+START = {'Sunrise': 5, 'Morning': 6, 'Day': 10, 'Sunset': 17, 'Evening': 18, 'Night': 21}
+for sub in dict.fromkeys(x['s'] for x in items):
+    parts = sorted((x for x in items if x['s'] == sub and x['n'].removeprefix(sub + ' ') in START),
+                   key=lambda x: START[x['n'].removeprefix(sub + ' ')])
+    if len(parts) < 3:
+        continue
+    times = [x['n'].removeprefix(sub + ' ') for x in parts]
+    first = items.index(parts[0])
+    items.insert(first, dict(
+        n=f'{sub} (Dynamic)', img=slices(f'{sub} wallpaper engine', [os.path.join(ROOT, 'public', x['img']) for x in parts]),
+        url='', c=parts[0]['c'], s=sub, v=parts[0]['v'], kind='we', anim=True, dyn=True, video=parts[0]['url'],
+        size=sum(map(remote_size, (x['url'] for x in parts))), parts=[dict(t=t, h=START[t], u=x['url']) for t, x in zip(times, parts)],
+        note='One wallpaper that follows the time of day — ' + ', '.join(f'{t} from {START[t]:02}:00' for t in times)
+             + '. Builds a Wallpaper Engine package from Apple’s videos; use Safari on a Mac, then copy the zip to your PC.'))
+
 # ---- Still wallpapers ----------------------------------------------------------
 # macOS lists them in /System/Library/Desktop Pictures as .madesktop stubs whose full image
 # macOS downloads on demand; Apple's public MobileAsset catalog has the download for each.
@@ -181,7 +203,7 @@ cats.append(dict(id='archive', n='macOS Archive', g='Pictures'))
 VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
 for x in items:
     assert x['v'] in VERSIONS, x
-    assert x['url'].startswith('https://') or x['kind'] == 'builtin', x
+    assert x['url'].startswith('https://') or x['kind'] in ('builtin', 'we'), x
     assert x['img'].startswith(('https://', 'thumbs/')), x
     assert not x['img'].startswith('thumbs/') or os.path.exists(os.path.join(ROOT, 'public', x['img'])), x
 assert {x['c'] for x in items} == {c['id'] for c in cats}
