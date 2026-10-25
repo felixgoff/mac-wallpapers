@@ -3,3 +3,5 @@ dist/
 scripts/cache/
 __pycache__/
 .DS_Store
+.impeccable/config.local.json
+.impeccable/hook.cache.json

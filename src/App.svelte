@@ -110,7 +110,7 @@
       return;
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') { e.preventDefault(); search.focus(); return; }
-    if (e.target.closest?.('button, a, input')) return; // buttons and links keep their own Space/Enter
+    if (e.target.closest?.('button, a, input') && (e.key === ' ' || e.key === 'Enter')) return; // buttons and links keep their own Space/Enter
     if (e.key === ' ' || (qlOpen && e.key === 'Escape')) {
       e.preventDefault();
       if (qlOpen) closeQL(); else if (selected != null) openQL(selected);

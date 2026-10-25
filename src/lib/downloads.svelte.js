@@ -110,7 +110,8 @@ async function buildPackage(d, mode) {
   } catch (err) {
     jobs.delete(key);
     if (err.name === 'AbortError') return say(`Stopped building ${what}`);
-    say('This browser can’t download Apple’s videos — open this page in Safari on a Mac', 7000);
+    say(parts.some(p => p.u.includes('sylvan.apple.com')) ? 'This browser can’t download Apple’s videos — open this page in Safari on a Mac'
+      : `Couldn’t download ${what} — try again`, 7000);
   }
 }
 

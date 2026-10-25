@@ -15,8 +15,8 @@ for /f "tokens=2,*" %%a in ('reg query "HKCU\\Software\\Valve\\Steam" /v SteamPa
 set "STEAM=%STEAM:/=\\%"
 set "WE="
 if exist "%STEAM%\\steamapps\\common\\wallpaper_engine" set "WE=%STEAM%\\steamapps\\common\\wallpaper_engine"
-if not defined WE for /f "tokens=2" %%p in ('findstr /c:"\\"path\\"" "%STEAM%\\steamapps\\libraryfolders.vdf" 2^>nul') do (
-  if exist "%%~p\\steamapps\\common\\wallpaper_engine" set "WE=%%~p\\steamapps\\common\\wallpaper_engine"
+if not defined WE for /f "tokens=1,*" %%p in ('findstr /c:"\\"path\\"" "%STEAM%\\steamapps\\libraryfolders.vdf" 2^>nul') do (
+  if exist "%%~q\\steamapps\\common\\wallpaper_engine" set "WE=%%~q\\steamapps\\common\\wallpaper_engine"
 )
 if not defined WE (
   echo Couldn't find Wallpaper Engine. Move this folder into

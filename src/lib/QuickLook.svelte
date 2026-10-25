@@ -72,7 +72,7 @@
   }
 </script>
 
-<div class="ql" class:open aria-hidden={!open} role="presentation" onclick={e => e.target === e.currentTarget && onclose()}>
+<div class="ql" class:open aria-hidden={!open} inert={!open} role="presentation" onclick={e => e.target === e.currentTarget && onclose()}>
   <div class="ql-panel" role="dialog" aria-modal="true" aria-labelledby="ql-title">
     {#if d}
       <div class="ql-bar">

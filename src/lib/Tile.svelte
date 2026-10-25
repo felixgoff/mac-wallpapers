@@ -13,6 +13,19 @@
   const ready = img => { if (img.complete && img.naturalWidth) loaded = true; };
 </script>
 
+<!-- A round tile button with a progress ring: download, portrait or Wallpaper Engine -->
+{#snippet button(kind, href, icon, stroke, job, label, title, onclick)}
+  <a class="dl {kind}" {href} target={kind ? null : '_blank'} rel="noopener" aria-label={label} {title}
+    class:loading={job?.state === 'loading'} class:indeterminate={job?.state === 'loading' && job.p == null}
+    class:done={job?.state === 'done'} style:--p={job?.p ?? 0}
+    onclick={e => { e.stopPropagation(); onclick(e, d); }}>
+    <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width={stroke} stroke-linecap="round" stroke-linejoin="round">{@html icon}</svg>
+    <svg class="ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>
+    <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
+    <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
+  </a>
+{/snippet}
+
 <!-- Arrow keys, Space and Enter are handled for the whole grid in App.svelte -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="tile" role="option" tabindex={selected ? 0 : -1} data-i={d.i} aria-selected={selected} style:--i={Math.min(order, 24)}
@@ -41,44 +54,20 @@
       </a>
     {/if}
     {#if d.kind !== 'builtin'}
-    <a class="dl" href={d.url} target="_blank" rel="noopener"
-      class:loading={job?.state === 'loading'} class:indeterminate={job?.state === 'loading' && job.p == null}
-      class:done={job?.state === 'done'} style:--p={job?.p ?? 0}
-      title={job?.state === 'loading'
-        ? `Downloading “${d.n}”${job.total ? ` — ${mb(job.got)} of ${mb(job.total)}` : ''}. Click to stop.`
-        : d.kind === 'set' ? `Download the “${d.n}” videos (${mb(d.size)}, best in Safari)`
-        : `Download “${d.n}”${d.kind === 'aerial' ? ' (4K video)' : ''}`}
-      aria-label="Download {d.n}"
-      onclick={e => { e.stopPropagation(); onDownloadClick(e, d); }}>
-      <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{@html ARROW}</svg>
-      <svg class="ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>
-      <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
-      <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
-    </a>
+      {@render button('', d.url, ARROW, 1.8, job, `Download “${d.n}”`,
+        job?.state === 'loading' ? `Downloading “${d.n}”${job.total ? ` — ${mb(job.got)} of ${mb(job.total)}` : ''}. Click to stop.`
+          : d.kind === 'set' ? `Download the “${d.n}” videos (${mb(d.size)}, best in Safari)`
+          : `Download “${d.n}”${d.kind === 'aerial' ? ' (4K video)' : ''}`, onDownloadClick)}
     {/if}
     {#if d.portrait}
-      <a class="dl pt" href="#portrait" aria-label="Download {d.n} for portrait screens"
-        class:loading={ptJob?.state === 'loading'} class:done={ptJob?.state === 'done'} style:--p={ptJob?.p ?? 0}
-        title={ptJob?.state === 'loading' ? `Downloading the portrait videos — ${mb(ptJob.got)} of ${mb(ptJob.total)}. Click to stop.`
-          : `Portrait: the light and dark videos for portrait screens (${mb(d.portrait.size)}, best in Safari)`}
-        onclick={e => { e.stopPropagation(); onPortrait(e, d); }}>
-        <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html PORTRAIT}</svg>
-        <svg class="ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>
-        <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
-        <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
-      </a>
+      {@render button('pt', '#portrait', PORTRAIT, 1.6, ptJob, `Download ${d.n} for portrait screens`,
+        ptJob?.state === 'loading' ? `Downloading the portrait videos — ${mb(ptJob.got)} of ${mb(ptJob.total)}. Click to stop.`
+          : `Portrait: the light and dark videos for portrait screens (${mb(d.portrait.size)}, best in Safari)`, onPortrait)}
     {/if}
     {#if d.we}
-      <a class="dl we" href="#wallpaper-engine" aria-label="Wallpaper Engine: {d.n}"
-        class:loading={weJob?.state === 'loading'} class:done={weJob?.state === 'done'} style:--p={weJob?.p ?? 0}
-        title={weJob?.state === 'loading' ? `Building for Wallpaper Engine${weJob.total ? ` — ${mb(weJob.got)} of ${mb(weJob.total)}` : ''}. Click to stop.`
-          : `Wallpaper Engine: a package that follows the time of day${d.we.video ? ` (${mb(d.size)} of videos, best in Safari)` : ''}`}
-        onclick={e => { e.stopPropagation(); onWallpaperEngine(e, d); }}>
-        <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html WE_ICON}</svg>
-        <svg class="ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>
-        <svg class="ring" viewBox="0 0 24 24"><circle class="track" cx="12" cy="12" r="9"/><circle class="bar" cx="12" cy="12" r="9"/></svg>
-        <svg class="stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor"/></svg>
-      </a>
+      {@render button('we', '#wallpaper-engine', WE_ICON, 1.6, weJob, `Wallpaper Engine: ${d.n}`,
+        weJob?.state === 'loading' ? `Building for Wallpaper Engine${weJob.total ? ` — ${mb(weJob.got)} of ${mb(weJob.total)}` : ''}. Click to stop.`
+          : `Wallpaper Engine: a package that follows the time of day${d.we.video ? ` (${mb(d.size)} of videos, best in Safari)` : ''}`, onWallpaperEngine)}
     {/if}
   </div>
   <div class="name" title={d.n}>{d.n}</div>
