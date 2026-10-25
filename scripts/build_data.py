@@ -332,9 +332,11 @@ def clip(url):
 
 from concurrent.futures import ThreadPoolExecutor
 aerials = [x for x in items if x.get('video', '').startswith('https://sylvan.apple.com/')]
+urls = sorted({x['video'] for x in aerials})  # once each: sets start with a single aerial's video
 with ThreadPoolExecutor(2) as pool:
-    for x, rel in zip(aerials, pool.map(lambda x: clip(x['video']), aerials)):
-        x['clip'] = rel
+    clips = dict(zip(urls, pool.map(clip, urls)))
+for x in aerials:
+    x['clip'] = clips[x['video']]
 
 # Self-check: everything must work from a public web page
 VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
