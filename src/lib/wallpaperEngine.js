@@ -6,6 +6,37 @@ import { mb } from './versions.js';
 
 export const videoName = part => `${part.t.toLowerCase()}.mp4`; // Apple's .mov files are MP4-compatible
 
+// Copies this folder into Wallpaper Engine's projects\myprojects, finding Wallpaper Engine in any Steam library
+const installer = dir => `@echo off
+setlocal
+set "SRC=%~dp0"
+set "STEAM="
+for /f "tokens=2,*" %%a in ('reg query "HKCU\\Software\\Valve\\Steam" /v SteamPath 2^>nul ^| find "SteamPath"') do set "STEAM=%%b"
+set "STEAM=%STEAM:/=\\%"
+set "WE="
+if exist "%STEAM%\\steamapps\\common\\wallpaper_engine" set "WE=%STEAM%\\steamapps\\common\\wallpaper_engine"
+if not defined WE for /f "tokens=2" %%p in ('findstr /c:"\\"path\\"" "%STEAM%\\steamapps\\libraryfolders.vdf" 2^>nul') do (
+  if exist "%%~p\\steamapps\\common\\wallpaper_engine" set "WE=%%~p\\steamapps\\common\\wallpaper_engine"
+)
+if not defined WE (
+  echo Couldn't find Wallpaper Engine. Move this folder into
+  echo   ...\\steamapps\\common\\wallpaper_engine\\projects\\myprojects
+  echo by hand, as the README explains.
+  pause
+  exit /b 1
+)
+set "DEST=%WE%\\projects\\myprojects\\${dir}"
+echo Installing to %DEST%
+robocopy "%SRC%." "%DEST%" /E /XF "Install to Wallpaper Engine.bat" /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 (
+  echo Copying failed.
+  pause
+  exit /b 1
+)
+echo Done. Open Wallpaper Engine: "${dir}" is under Installed.
+pause
+`.replace(/\n/g, '\r\n'); // Windows batch files want CRLF line endings
+
 export function packageFiles(d, videos, preview) {
   const { video, parts } = d.we;
   const dir = d.n.replace(/[/\\:*?"<>|]/g, '-');
@@ -74,11 +105,14 @@ so the PC needs an internet connection, at least the first time each one shows.`
 Shows Apple's ${d.n} by time of day: ${schedule}.
 
 To add it:
-1. Unzip this file.
-2. Move the "${dir}" folder into Wallpaper Engine's projects folder:
+1. Unzip this file (right-click > Extract All).
+2. Double-click "Install to Wallpaper Engine.bat" inside the "${dir}" folder. Done: open Wallpaper Engine,
+   "${d.n}" is under Installed. (If Windows warns about the file, choose More info > Run anyway.)
+
+Or by hand: move the "${dir}" folder into Wallpaper Engine's projects folder:
    C:\\Program Files (x86)\\Steam\\steamapps\\common\\wallpaper_engine\\projects\\myprojects
    (create the "myprojects" folder if it isn't there yet).
-3. Open Wallpaper Engine; "${d.n}" appears under Installed.
+then open Wallpaper Engine; "${d.n}" appears under Installed.
 
 ${media}
 
@@ -89,6 +123,7 @@ Wallpapers © Apple Inc. For personal use. Made with https://felixgoff.github.io
     { name: `${dir}/index.html`, data: html },
     { name: `${dir}/README.txt`, data: readme },
     { name: `${dir}/preview.jpg`, data: preview },
+    { name: `${dir}/Install to Wallpaper Engine.bat`, data: installer(dir) },
     ...videos.map(v => ({ name: `${dir}/${v.name}`, data: v.blob, size: v.size, crc: v.crc })),
   ];
 }
