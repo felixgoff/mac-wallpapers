@@ -119,6 +119,11 @@ def animated(name, land, port, img, c, s, v):
                      ' videos, Portrait the portrait ones.')
 
 
+# Files Apple only ships inside its systems are on the repo's "media" GitHub Release (kept out of git): name -> bytes
+MEDIA = 'https://github.com/felixgoff/mac-wallpapers/releases/download/media/'
+have = json.loads(subprocess.run(['gh', 'release', 'view', 'media', '-R', 'felixgoff/mac-wallpapers', '--json', 'assets',
+                                  '-q', '[.assets[] | {(.name): .size}] | add // {}'], capture_output=True, text=True, check=True).stdout)
+
 var = {(x['variant']['appearance'], x['variant']['orientation']): x for x in items if x.get('variant')}
 if var:  # macOS Golden Gate, from the aerial manifest
     first = min(items.index(x) for x in var.values())
@@ -136,13 +141,10 @@ if var:  # macOS Golden Gate, from the aerial manifest
                                      [m['lightPortraitRemoteURL'], m['darkPortraitRemoteURL']],
                                      slices('Tahoe', [f'{NEPTUNE}/Tahoe{t}.heic' for t in ('Light', 'Dark')]),
                                      land[0]['c'], land[0]['s'], '26'))
-    # macOS Sonoma: Apple only ships these videos inside macOS, so they're files on the repo's "media" GitHub
-    # Release (kept out of git); uploaded from this Mac the first time
+    # macOS Sonoma: Apple only ships these videos inside macOS, so they're files on the media release,
+    # uploaded from this Mac the first time
     SONOMA = os.path.join(DP, '.wallpapers', 'Sonoma')
-    MEDIA = 'https://github.com/felixgoff/mac-wallpapers/releases/download/media/'
     son = {}
-    have = json.loads(subprocess.run(['gh', 'release', 'view', 'media', '-R', 'felixgoff/mac-wallpapers', '--json', 'assets',
-                                      '-q', '[.assets[].name]'], capture_output=True, text=True, check=True).stdout)
     for m in ('Light', 'Dark'):
         for o in ('Landscape', 'Portrait'):
             name = f'sonoma-{m.lower()}-{o.lower()}.mov'
@@ -276,6 +278,18 @@ for k in (3, 8, 12, 15):
     srcs.append(p)
 moj['img'] = slices('Mojave Dynamic', srcs)
 cats.append(dict(id='archive', n='macOS Archive', g='Pictures'))
+
+# Mac OS 8.5–9's default desktop pattern isn't in the album: it only exists inside Apple's theme file (themes.py)
+PAT = 'mac-os-default.png'
+if PAT not in have:
+    import themes
+    themes.pattern('Mac OS Default', os.path.join(CACHE, PAT))
+    subprocess.run(['gh', 'release', 'upload', 'media', os.path.join(CACHE, PAT), '-R', 'felixgoff/mac-wallpapers'], check=True)
+    have[PAT] = os.path.getsize(os.path.join(CACHE, PAT))
+items.insert(next(k for k, x in enumerate(items) if x.get('pattern') and x['v'] == '8.5'),
+             dict(n='Mac OS Default', img=MEDIA + PAT, url=MEDIA + PAT, size=have[PAT], c='archive', s='8.5', v='8.5',
+                  kind='still', anim=False, how='link', pattern=True, alts=[], w=128, h=128,
+                  note='Mac OS 8.5–9’s default desktop pattern, from the “Mac OS Default” theme'))
 
 # ---- Wallpaper Engine frames for still dynamic wallpapers ------------------------
 # The package's page loads these images from the web while it runs (Google Photos doesn't allow

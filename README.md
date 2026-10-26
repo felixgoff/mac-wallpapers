@@ -59,6 +59,7 @@ cp ~/Downloads/entries.json scripts/cache/   # Apple's aerial manifest
 curl -o scripts/cache/catalog.xml https://mesu.apple.com/assets/macos/com_apple_MobileAsset_DesktopPicture/com_apple_MobileAsset_DesktopPicture.xml
 python3 scripts/bag.py           # Apple's wallpapers republished by Basic Apple Guy
 python3 scripts/fetch_album.py   # the "macOS Wallpapers" Google Photos album
+unar -o scripts/cache Theme_Files.sit  # Mac OS 9.2.2's theme files (macintoshrepository.org/16554), for Mac OS 8.5–9's default pattern
 python3 scripts/build_data.py    # writes src/data.json and public/thumbs/
 ```
 
@@ -71,6 +72,8 @@ python3 scripts/build_data.py    # writes src/data.json and public/thumbs/
 - **Apple Extras:** Apple's own wallpapers as republished by [Basic Apple Guy](https://basicappleguy.com) — some are
   frames from Apple's videos that he upscaled; each one says so and links to his post.
 - **macOS Archive:** the "macOS Wallpapers" Google Photos album shared by Евгений Богун.
+- **Mac OS 8.5–9's default pattern:** taken out of Apple's "Apple platinum" theme file (Mac OS 9.2.2's Theme Files on
+  [Macintosh Repository](https://www.macintoshrepository.org/16554)) by `scripts/themes.py`; it's a file on the media release.
 - **Tahoe, Sequoia and other light/dark images:** [LAYTAT/macOS-Wallpapers](https://github.com/LAYTAT/macOS-Wallpapers) on GitHub.
 
 All wallpapers are © Apple Inc. This is an unofficial fan project and isn't affiliated with Apple.
