@@ -4,6 +4,7 @@
   import { visibleItems, groupItems, inCategory } from './lib/group.js';
   import { ICONS } from './lib/icons.js';
   import { toast } from './lib/downloads.svelte.js';
+  import Activity from './lib/Activity.svelte';
   import Tile from './lib/Tile.svelte';
   import QuickLook from './lib/QuickLook.svelte';
 
@@ -194,3 +195,4 @@
   onselect={i => select(i, true)} onclose={closeQL} />
 
 <div class="toast" class:show={toast.show} role="status" aria-live="polite">{toast.msg}</div>
+<Activity />

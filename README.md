@@ -14,16 +14,31 @@ Built with [Svelte](https://svelte.dev) and [Vite](https://vite.dev) as a static
 
 ## Wallpaper Engine packages
 
-Dynamic wallpapers have a **Wallpaper Engine** button next to the normal download. It builds a ready-to-import
-Wallpaper Engine web wallpaper (`project.json`, a page that switches with the clock and crossfades, a preview and
-a README) that follows the time of day:
+Every wallpaper that moves or changes has a **Wallpaper Engine** button next to the normal download. It builds a
+ready-to-import Wallpaper Engine web wallpaper (`project.json`, a page that switches with the clock and crossfades,
+a preview, a README and an installer):
 
 - **Still dynamic wallpapers** (Tahoe, Sonoma, Big Sur, The Lake, hello, …): light/dark or dawn/day/dusk/night
   images that the page loads from the web while it runs, so the package is tiny and builds in any browser.
 - **Aerial sets** filmed at several times of day (Tahoe, Golden Gate, Sequoia): Apple's videos go inside the
   package; copy the zip to your PC.
+- **Single aerials**: the video, looping.
 
-Grid, Motion, Iridescence and Macintosh have no public light/dark images, so they don't get the button.
+Grid, Motion and Iridescence have no light/dark copies anywhere, so the page takes both images out of Apple's HEIC
+while it builds the package (below) and puts them inside. Macintosh is drawn live by macOS and has no file, so it
+only links to a recording on the Steam Workshop.
+
+## Full-size pictures
+
+Quick Look shows each picture at full size. Apple's catalog only offers zipped HEIC files, so for those the page
+fetches the zip through the proxy, takes out the HEIC (`unzipFile` in `src/lib/zip.js`) and decodes it
+(`src/lib/heic.js`): Safari natively, other browsers with [libheif](https://github.com/catdad-experiments/libheif-js),
+a 2 MB decoder that loads the first time it's needed. An activity panel at the bottom right shows every download,
+decode and package build with its progress and a Cancel button.
+
+The repo holds no full-size images or videos: macOS Sonoma's videos, which Apple only ships inside macOS, are files
+on the [media release](https://github.com/felixgoff/mac-wallpapers/releases/tag/media) (`build_data.py` uploads
+them the first time).
 
 ## Develop
 
@@ -63,7 +78,7 @@ All wallpapers are © Apple Inc. This is an unofficial fan project and isn't aff
 ## Known limits
 
 - Only Safari trusts the certificate of Apple's aerial server. Other browsers preview and download aerials through a
-  Cloudflare Worker proxy (`dry-dawn-9e3c.felixmgoff.workers.dev`, see `src/lib/downloads.svelte.js`). Firefox can't
+  Cloudflare Worker proxy (`dry-dawn-9e3c.felixmgoff.workers.dev`, see `src/lib/proxy.js`). Firefox can't
   play Apple's HEVC videos, so aerial previews show the still picture there; downloads still work.
 - Wallpaper Engine packages contain Apple's original 4K HEVC videos; they're untested in Wallpaper Engine itself, and some PCs need Microsoft's HEVC Video Extensions to play them.
 - macOS versions for archive items follow the album's order and are best guesses in places.

@@ -67,7 +67,7 @@
     {#if d.we}
       {@render button('we', '#wallpaper-engine', WE_ICON, 1.6, weJob, `Wallpaper Engine: ${d.n}`,
         weJob?.state === 'loading' ? `Building for Wallpaper Engine${weJob.total ? ` — ${mb(weJob.got)} of ${mb(weJob.total)}` : ''}. Click to stop.`
-          : `Wallpaper Engine: a package that follows the time of day${d.we.video ? ` (${mb(d.size)} of videos)` : ''}`, onWallpaperEngine)}
+          : `Wallpaper Engine: a package that ${d.we.parts.length > 1 ? 'follows the time of day' : 'plays the video'}${d.we.video ? ` (${mb(d.size)})` : ''}`, onWallpaperEngine)}
     {/if}
   </div>
   <div class="name" title={d.n}>{d.n}</div>

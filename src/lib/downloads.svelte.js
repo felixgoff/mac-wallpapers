@@ -2,6 +2,8 @@ import { SvelteMap } from 'svelte/reactivity';
 import { mb } from './versions.js';
 import { crc32, zip } from './zip.js';
 import { packageFiles, videoName } from './wallpaperEngine.js';
+import { fetchable } from './proxy.js';
+import { heicPicture, heicFrames } from './heic.js';
 
 export const toast = $state({ msg: '', show: false });
 let timer;
@@ -12,13 +14,16 @@ export function say(msg, ms = 2400) {
   timer = setTimeout(() => (toast.show = false), ms);
 }
 
-// Only Safari trusts the certificate of Apple's aerial server; other browsers load its videos through a proxy
-const SAFARI = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Firefox/.test(navigator.userAgent);
-export const apple = u => !SAFARI && u.startsWith('https://sylvan.apple.com/') ? 'https://dry-dawn-9e3c.felixmgoff.workers.dev/' + u : u;
-
 // Downloads stream through fetch so the badge can show real progress. If the browser can't
 // fetch, the next click just follows the link.
-export const jobs = new SvelteMap(); // item index -> { state: 'loading'|'done', p, got, total, ctrl }
+// key -> { state: 'loading'|'done', title, step (what it's doing now), p (0–1, null if unknown), got, total, ctrl }.
+// The activity panel lists the loading ones with a Cancel button.
+export const jobs = new SvelteMap();
+const newJob = (key, title, step, p = null, total = 0) => {
+  const j = $state({ state: 'loading', title, step, p, got: 0, total, ctrl: new AbortController() });
+  jobs.set(key, j);
+  return j;
+};
 let fetchBroken = false;
 
 const fileName = (n, ext) => n.replace(/[/\\:*?"<>|]/g, '-') + ext;
@@ -36,10 +41,9 @@ function saveBlob(blob, name) {
 async function download(d) {
   const cur = jobs.get(d.i);
   if (cur?.state === 'loading') return cur.ctrl.abort();
-  const j = $state({ state: 'loading', p: null, got: 0, total: 0, ctrl: new AbortController() });
-  jobs.set(d.i, j);
+  const j = newJob(d.i, `“${d.n}”`, 'Starting the download');
   try {
-    const res = await fetch(apple(d.url), { signal: j.ctrl.signal });
+    const res = await fetch(fetchable(d.url), { signal: j.ctrl.signal });
     if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
     j.total = +res.headers.get('content-length') || 0;
     say(`Downloading “${d.n}”${j.total ? ` — ${mb(j.total)}` : ''}`);
@@ -51,7 +55,12 @@ async function download(d) {
       chunks.push(value);
       got += value.length;
       const now = performance.now();
-      if (now - last > 120) { last = now; j.got = got; if (j.total) j.p = got / j.total; }
+      if (now - last > 120) {
+        last = now;
+        j.got = got;
+        if (j.total) j.p = got / j.total;
+        j.step = `Downloading — ${mb(got)}${j.total ? ` of ${mb(j.total)}` : ''}`;
+      }
     }
     saveBlob(new Blob(chunks, { type: res.headers.get('content-type') || 'application/octet-stream' }), fileName(d.n, d.ext || '.mov'));
     Object.assign(j, { state: 'done', p: 1, got });
@@ -65,6 +74,8 @@ async function download(d) {
   }
 }
 
+const imageName = part => `${part.t.toLowerCase()}.jpg`;
+
 // Wallpaper Engine and portrait downloads are tracked separately from the normal download
 export const weKey = d => `${d.i}:we`;
 export const portraitKey = d => `${d.i}:portrait`;
@@ -77,15 +88,20 @@ async function buildPackage(d, mode) {
   const total = mode === 'portrait' ? d.portrait.size : d.size;
   const cur = jobs.get(key);
   if (cur?.state === 'loading') return cur.ctrl.abort();
-  const j = $state({ state: 'loading', p: 0, got: 0, total, ctrl: new AbortController() });
-  jobs.set(key, j);
   const what = mode === 'we' ? `“${d.n}” for Wallpaper Engine` : `“${d.n}” ${mode === 'portrait' ? 'portrait ' : ''}videos`;
+  const j = newJob(key, what, 'Starting', 0, total);
   try {
-    if (parts.length) say(`Building ${what} — downloading ${mb(total)} of Apple’s videos…`, 6000);
-    const videos = [];
+    const videos = []; // the files that go inside the package: videos, or images taken out of Apple's HEIC
     let got = 0, last = 0;
-    for (const part of parts) {
-      const res = await fetch(apple(part.u), { signal: j.ctrl.signal });
+    if (mode === 'we' && d.we.heic) {
+      const jpegs = await heicFrames(d, j);
+      for (const [k, blob] of jpegs.slice(0, d.we.parts.length).entries()) {
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        videos.push({ name: imageName(d.we.parts[k]), blob, size: bytes.length, crc: crc32(bytes) });
+      }
+    }
+    for (const [k, part] of parts.entries()) {
+      const res = await fetch(fetchable(part.u), { signal: j.ctrl.signal });
       if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
       const reader = res.body.getReader(), chunks = [];
       let crc = 0, size = 0;
@@ -97,14 +113,23 @@ async function buildPackage(d, mode) {
         size += value.length;
         got += value.length;
         const now = performance.now();
-        if (now - last > 120) { last = now; j.got = got; j.p = Math.min(got / total, 0.99); }
+        if (now - last > 120) {
+          last = now;
+          j.got = got;
+          j.p = Math.min(got / total, 0.99);
+          j.step = `Downloading ${parts.length > 1 ? `video ${k + 1} of ${parts.length}` : 'the video'} — ${mb(got)} of ${mb(total)}`;
+        }
       }
       videos.push({ name: videoName(part), blob: new Blob(chunks), size, crc });
     }
+    j.step = 'Packing the zip';
+    j.p = 0.99;
     const name = `${d.n} (${mode === 'we' ? 'Wallpaper Engine' : mode === 'portrait' ? 'portrait videos' : 'videos'})`;
     if (mode === 'we') {
       const preview = new Uint8Array(await (await fetch(d.img)).arrayBuffer());
-      saveBlob(zip(packageFiles(d, videos, preview)), fileName(name, '.zip'));
+      // HEIC images travel inside the package under their own file names
+      const pkg = d.we.heic ? { ...d, we: { ...d.we, parts: d.we.parts.map(p => ({ ...p, u: imageName(p) })) } } : d;
+      saveBlob(zip(packageFiles(pkg, videos, preview)), fileName(name, '.zip'));
     } else {
       saveBlob(zip(videos.map(v => ({ name: `${d.n}/${v.name}`, data: v.blob, size: v.size, crc: v.crc }))), fileName(name, '.zip'));
     }
@@ -159,4 +184,21 @@ export async function onAltClick(e, d, alt) {
     fetchBroken = true;
     say('This browser can’t download it here — click again to open the file instead', 5000);
   }
+}
+
+// The full-size picture of one of Apple's zipped HEIC wallpapers, for Quick Look; the URL is kept for the next visit
+// shortcut: kept URLs (≈10 MB each) live until the page closes; fine for browsing, evict if people open hundreds
+const pictures = new Map();
+export const fullKey = d => `${d.i}:full`;
+export function fullPicture(d) {
+  if (!pictures.has(d.i)) {
+    const j = newJob(fullKey(d), `“${d.n}” at full size`, 'Starting');
+    const done = heicPicture(d, j).finally(() => jobs.get(fullKey(d)) === j && jobs.delete(fullKey(d)));
+    pictures.set(d.i, done);
+    done.catch(err => {
+      pictures.delete(d.i);
+      if (err.name !== 'AbortError') say(`Couldn’t load “${d.n}” at full size — showing the preview`, 5000);
+    });
+  }
+  return pictures.get(d.i);
 }

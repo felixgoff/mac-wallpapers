@@ -41,6 +41,7 @@ export function packageFiles(d, videos, preview) {
   const { video, parts } = d.we;
   const dir = d.n.replace(/[/\\:*?"<>|]/g, '-');
   const schedule = parts.map(p => `${p.t} from ${String(p.h).padStart(2, '0')}:00`).join(', ');
+  const shows = parts.length > 1 ? ` by time of day: ${schedule}` : ` as a looping ${video ? 'video' : 'picture'}`;
   const tag = video ? 'video' : 'img';
   const el = video ? '<video muted loop playsinline></video>' : '<img alt="">';
   const html = `<!doctype html>
@@ -92,17 +93,18 @@ ${el}
     type: 'web',
     file: 'index.html',
     preview: 'preview.jpg',
-    description: `Apple's ${d.n} as a wallpaper that follows the time of day: ${schedule}.`,
+    description: `Apple's ${d.n}${shows}.`,
     tags: [video ? 'Landscape' : 'Abstract'],
   };
   const media = video
-    ? `The videos are Apple's 4K HEVC aerials (${mb(d.size)} in total). If the wallpaper stays black, Windows
+    ? `${parts.length > 1 ? 'The videos are' : 'The video is'} Apple's 4K HEVC aerial footage (${mb(d.size)}${parts.length > 1 ? ' in total' : ''}). If the wallpaper stays black, Windows
 can't decode HEVC on your PC; installing Microsoft's "HEVC Video Extensions" usually fixes that.`
+    : d.we.heic ? 'The pictures are inside the package, taken from Apple\'s original HEIC file.'
     : `The pictures load from the web while the wallpaper runs (Google Photos, GitHub or Basic Apple Guy),
 so the PC needs an internet connection, at least the first time each one shows.`;
-  const readme = `${d.n} — a dynamic wallpaper for Wallpaper Engine
+  const readme = `${d.n} — a wallpaper for Wallpaper Engine
 
-Shows Apple's ${d.n} by time of day: ${schedule}.
+Shows Apple's ${d.n}${shows}.
 
 To add it:
 1. Unzip this file (right-click > Extract All).

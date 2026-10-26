@@ -49,3 +49,24 @@ export function zip(files) {
   end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
   return new Blob([...parts, ...central, end], { type: 'application/zip' });
 }
+
+// The first file in a zip whose name passes test, as a Blob (Apple's catalog zips store the HEIC uncompressed;
+// deflated entries are inflated). Reads the central directory, as local headers may leave sizes out.
+export async function unzipFile(buf, test) {
+  const v = new DataView(buf);
+  let e = buf.byteLength - 22;
+  while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not a zip file');
+  for (let p = v.getUint32(e + 16, true), k = v.getUint16(e + 10, true); k > 0; k--) {
+    const method = v.getUint16(p + 10, true), size = v.getUint32(p + 20, true), at = v.getUint32(p + 42, true);
+    const nl = v.getUint16(p + 28, true), name = new TextDecoder().decode(new Uint8Array(buf, p + 46, nl));
+    if (test(name)) {
+      const data = new Blob([new Uint8Array(buf, at + 30 + v.getUint16(at + 26, true) + v.getUint16(at + 28, true), size)]);
+      if (method === 0) return data;
+      if (method === 8) return new Response(data.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+      throw new Error(`unsupported zip compression ${method}`);
+    }
+    p += 46 + nl + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+  }
+  throw new Error('file not found in the zip');
+}

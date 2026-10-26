@@ -1,5 +1,6 @@
 <script>
-  import { apple, jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say } from './downloads.svelte.js';
+  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say, fullPicture, fullKey } from './downloads.svelte.js';
+  import { playable } from './proxy.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
   import { ARROW, WE_ICON, PORTRAIT, WORKSHOP, LINK } from './icons.js';
@@ -33,9 +34,23 @@
   $effect(() => {
     if (!video) return;
     playing = failed = false;
-    if (open && d?.video) { video.src = apple(d.video); video.play().catch(() => {}); }
+    if (open && d?.video) { video.src = playable(d.video); video.play().catch(() => {}); }
     else { video.pause(); video.removeAttribute('src'); video.load(); }
   });
+
+  // The full-size picture fades in over the thumbnail: the file itself, or Apple's HEIC decoded in the page
+  let full = $state(null);
+  $effect(() => {
+    full = null;
+    if (!open || !d || d.kind !== 'still' || d.pattern) return;
+    if (d.full) return void (full = d.full);
+    if (d.how !== 'zip') return;
+    const item = d;
+    fullPicture(item).then(u => d === item && open && (full = u), () => {});
+    // moving on cancels a decode that hasn't finished: no point downloading a picture nobody looks at
+    return () => jobs.get(fullKey(item))?.ctrl.abort();
+  });
+  const decoding = $derived(d && jobs.get(fullKey(d))?.state === 'loading');
 
   export function step(dir) {
     const k = list.findIndex(x => x.i === d.i);
@@ -95,7 +110,7 @@
         {/if}
         {#if d.we}
           <a class="btn alt-btn" href="#wallpaper-engine" style:--p={weJob?.p ?? 0} onclick={e => onWallpaperEngine(e, d)}
-            title="A Wallpaper Engine package that follows the time of day">
+            title={`A Wallpaper Engine package that ${d.we.parts.length > 1 ? 'follows the time of day' : 'plays the video'}`}>
             <span class="fill"></span>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html WE_ICON}</svg>
             <span>{weLabel}</span>
@@ -112,9 +127,11 @@
         {/if}
       </div>
     {/if}
-    <div class="ql-img" bind:this={stage} class:playing class:failed class:still={d && !d.video} class:pattern={d?.pattern}
+    <div class="ql-img" bind:this={stage} class:playing class:failed class:still={d && !d.video} class:busy={decoding} class:pattern={d?.pattern}
       style:background-image={d?.pattern ? `url('${d.img}')` : null} style:background-size={d?.pattern ? patSize(d) * 2 + 'px' : null}>
       {#if d && !d.pattern}<img src={d.img} alt="">{/if}
+      <!-- the full-size picture fades in over the thumbnail once it has loaded -->
+      {#key full}{#if full}<img class="full" src={full} alt="" onload={e => e.currentTarget.classList.add('ok')}>{/if}{/key}
       <video bind:this={video} muted loop playsinline preload="auto"
         onplaying={() => (playing = true)} onerror={() => video.getAttribute('src') && (failed = true)}></video>
       <div class="spinner" aria-hidden="true">

@@ -214,6 +214,9 @@ body {
 .ql-img img { filter: blur(14px) saturate(1.2); transform: scale(1.08); transition: filter .5s, transform .5s; }
 .ql-img.failed img, .ql-img.still img { filter: none; transform: none; }
 .ql-img.still .spinner { opacity: 0; }
+.ql-img img.full { opacity: 0; transition: opacity .4s var(--ease); }
+.ql-img img.full.ok { opacity: 1; }
+.ql-img.still:has(img.full:not(.ok)) .spinner, .ql-img.still.busy .spinner { opacity: 1; }
 /* Animated-wallpaper badge, like the play glyph System Settings puts on aerials */
 .anim {
   position: absolute; left: 7px; bottom: 7px; z-index: 1; width: 22px; height: 16px; border-radius: 4px;
@@ -266,3 +269,23 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
 }
+
+/* Activity panel: what's downloading or converting, bottom right like a macOS progress window */
+.activity { position: fixed; right: 16px; bottom: 16px; z-index: 13; display: grid; gap: 8px; width: min(320px, calc(100vw - 32px)); }
+.act { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 12px; color: var(--text);
+  background: var(--panel); backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  box-shadow: 0 0 0 .5px var(--hairline), 0 10px 30px -8px rgba(0,0,0,.35); animation: rise .35s var(--out) backwards; }
+.act-text { flex: 1; min-width: 0; display: grid; gap: 3px; font-size: 12px; }
+.act-text b, .act-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-text b { font-weight: 600; }
+.act-text span { color: var(--text2); font-variant-numeric: tabular-nums; }
+.act-bar { position: relative; height: 4px; margin-top: 3px; border-radius: 2px; background: var(--field); overflow: hidden; }
+.act-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--accent); transition: width .2s linear; }
+.act-bar.indeterminate i { width: 35%; animation: act-slide 1.1s ease-in-out infinite; }
+@keyframes act-slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+.act-x { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%;
+  color: var(--text2); background: var(--field); cursor: pointer; }
+.act-x:hover { color: var(--text); background: var(--selected); }
+.act-x svg { width: 12px; height: 12px; }
+@media (max-width: 640px) { .activity { right: 16px; bottom: 72px; } }
+@media (prefers-reduced-motion: reduce) { .act { animation: none; } .act-bar.indeterminate i { animation: none; width: 100%; opacity: .5; } }

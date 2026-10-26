@@ -38,9 +38,16 @@ def slices(key, srcs, w=428, h=268):
     return 'thumbs/' + os.path.basename(out)
 
 
+SIZES = os.path.join(CACHE, 'sizes.json')
+sizes = json.load(open(SIZES)) if os.path.exists(SIZES) else {}
+
+
 def remote_size(url):
-    head = subprocess.run(['curl', '-sIL', url], capture_output=True, text=True, check=True).stdout
-    return int(re.findall(r'(?im)^content-length:\s*(\d+)', head)[-1])
+    if url not in sizes:
+        head = subprocess.run(['curl', '-sIL', url], capture_output=True, text=True, check=True).stdout
+        sizes[url] = int(re.findall(r'(?im)^content-length:\s*(\d+)', head)[-1])
+        json.dump(sizes, open(SIZES, 'w'))
+    return sizes[url]
 
 
 def luma(url, key):
@@ -97,12 +104,13 @@ for a in d['assets']:  # file order is already grouped by category and subcatego
         name = f"{sub} {parts[2].title()}" if len(parts) > 2 else name
     url = a['url-4K-SDR-240FPS']
     items.append(dict(n=name, img=aerial_thumb(a['previewImage']), url=url, c=a['categories'][0], s=sub,
-                      v=AERIAL_V.get(sub, '14'), kind='aerial', anim=True, video=url, ext='.mov', variant=a.get('variant')))
+                      v=AERIAL_V.get(sub, '14'), kind='aerial', anim=True, video=url, ext='.mov', variant=a.get('variant'),
+                      size=remote_size(url), we=dict(video=True, parts=[dict(t='Video', h=0, u=url)])))
 
 # Animated wallpapers that come as four videos (light/dark × landscape/portrait) become one dynamic
 # wallpaper: Download saves the landscape pair, Portrait the portrait pair, Wallpaper Engine follows the clock
 def animated(name, land, port, img, c, s, v):
-    size = lambda u: os.path.getsize(os.path.join(ROOT, 'public', u)) if u.startswith('videos/') else remote_size(u)
+    size = remote_size
     return dict(n=name, img=img, url='', c=c, s=s, v=v, kind='set', anim=True, dyn=True, video=land[0],
                 size=sum(map(size, land)),
                 we=dict(video=True, parts=[dict(t=t, h=h, u=u) for t, h, u in zip(('Light', 'Dark'), (7, 19), land)]),
@@ -128,16 +136,18 @@ if var:  # macOS Golden Gate, from the aerial manifest
                                      [m['lightPortraitRemoteURL'], m['darkPortraitRemoteURL']],
                                      slices('Tahoe', [f'{NEPTUNE}/Tahoe{t}.heic' for t in ('Light', 'Dark')]),
                                      land[0]['c'], land[0]['s'], '26'))
-    # macOS Sonoma: Apple only ships these videos inside macOS, so the site hosts copies in public/videos
+    # macOS Sonoma: Apple only ships these videos inside macOS, so they're files on the repo's "media" GitHub
+    # Release (kept out of git); uploaded from this Mac the first time
     SONOMA = os.path.join(DP, '.wallpapers', 'Sonoma')
-    os.makedirs(os.path.join(ROOT, 'public', 'videos'), exist_ok=True)
+    MEDIA = 'https://github.com/felixgoff/mac-wallpapers/releases/download/media/'
     son = {}
     for m in ('Light', 'Dark'):
         for o in ('Landscape', 'Portrait'):
-            rel = f'videos/sonoma-{m.lower()}-{o.lower()}.mov'
-            if not os.path.exists(os.path.join(ROOT, 'public', rel)):
-                shutil.copy(os.path.join(SONOMA, f'Sonoma Graphic {m} {o}.mov'), os.path.join(ROOT, 'public', rel))
-            son[m, o] = rel
+            name = f'sonoma-{m.lower()}-{o.lower()}.mov'
+            if subprocess.run(['curl', '-sfIL', '-o', '/dev/null', MEDIA + name]).returncode:
+                shutil.copy(os.path.join(SONOMA, f'Sonoma Graphic {m} {o}.mov'), os.path.join(CACHE, name))
+                subprocess.run(['gh', 'release', 'upload', 'media', os.path.join(CACHE, name), '-R', 'felixgoff/mac-wallpapers'], check=True)
+            son[m, o] = MEDIA + name
     items.insert(first + 2, animated('macOS Sonoma', [son['Light', 'Landscape'], son['Dark', 'Landscape']],
                                      [son['Light', 'Portrait'], son['Dark', 'Portrait']],
                                      slices('Sonoma', [os.path.join(DP, '.thumbnails', f'Sonoma {t}.heic') for t in ('Light', 'Dark')]),
@@ -289,6 +299,11 @@ for x in items:
         if x['n'] == 'Mojave Dynamic':
             frames = [x['url']] + frames
         frames = [u[:-len('=d')] + '=s0' if u.endswith('=d') else u for u in frames]  # =s0 serves HEIC as JPEG
+        if len(frames) < 2 and x['how'] == 'zip':
+            # No copies anywhere (Grid, Motion, Iridescence): the browser takes the light and dark images out of
+            # Apple's HEIC while it builds the package, and they go inside it
+            x['we'] = dict(video=False, heic=True, parts=[dict(t=t, h=h, u='') for t, h in TWO])
+            continue
         if len(frames) < 2:
             continue
         frames.sort(key=lambda u: luma(u.removesuffix('=s0') + '=w32', x['n'] + u[-40:]))
@@ -296,6 +311,18 @@ for x in items:
         urls = [frames[-1], frames[0]] if n < 4 else [frames[round(n * .45)], frames[-1], frames[round(n * .65)], frames[0]]
     sched = TWO if len(urls) == 2 else FOUR
     x['we'] = dict(video=False, parts=[dict(t=t, h=h, u=u) for (t, h), u in zip(sched, urls)])
+
+# Quick Look shows the full-size picture: the file itself where browsers can show it, else the day frame.
+# The rest are Apple's zipped HEIC files, which Quick Look unzips and decodes in the browser.
+for x in items:
+    if x['kind'] != 'still' or x.get('pattern'):
+        continue
+    day = next((p['u'] for p in x.get('we', {}).get('parts', []) if p['t'] == 'Day' and p['u']), None)
+    if x['how'] == 'zip' or 'drive.google.com' in x['url']:
+        if day:
+            x['full'] = day
+    else:
+        x['full'] = x['url'][:-len('=d')] + '=s0' if x['url'].endswith('=d') else x['url']
 
 # Wallpaper Engine versions other people recorded and shared on the Steam Workshop: subscribing there adds them
 # to Wallpaper Engine in one click (and covers Macintosh, which macOS draws live and the site can't package)
@@ -315,10 +342,12 @@ for x in items:
     assert x['url'].startswith('https://') or x['kind'] in ('builtin', 'set'), x
     assert x['img'].startswith(('https://', 'thumbs/')), x
     assert not x['img'].startswith('thumbs/') or os.path.exists(os.path.join(ROOT, 'public', x['img'])), x
+    assert x['kind'] != 'aerial' or x.get('we'), x
 assert {x['c'] for x in items} == {c['id'] for c in cats}
 
 json.dump(dict(cats=cats, items=items), open(os.path.join(ROOT, 'src', 'data.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 used = {os.path.basename(x['img']) for x in items if x['img'].startswith('thumbs/')}
 for f in set(os.listdir(THUMBS)) - used:
     os.remove(os.path.join(THUMBS, f))
+
 print(len(items), 'wallpapers;', len(os.listdir(THUMBS)), 'thumbnails')
