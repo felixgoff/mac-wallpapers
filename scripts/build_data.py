@@ -141,10 +141,12 @@ if var:  # macOS Golden Gate, from the aerial manifest
     SONOMA = os.path.join(DP, '.wallpapers', 'Sonoma')
     MEDIA = 'https://github.com/felixgoff/mac-wallpapers/releases/download/media/'
     son = {}
+    have = json.loads(subprocess.run(['gh', 'release', 'view', 'media', '-R', 'felixgoff/mac-wallpapers', '--json', 'assets',
+                                      '-q', '[.assets[].name]'], capture_output=True, text=True, check=True).stdout)
     for m in ('Light', 'Dark'):
         for o in ('Landscape', 'Portrait'):
             name = f'sonoma-{m.lower()}-{o.lower()}.mov'
-            if subprocess.run(['curl', '-sfIL', '-o', '/dev/null', MEDIA + name]).returncode:
+            if name not in have:
                 shutil.copy(os.path.join(SONOMA, f'Sonoma Graphic {m} {o}.mov'), os.path.join(CACHE, name))
                 subprocess.run(['gh', 'release', 'upload', 'media', os.path.join(CACHE, name), '-R', 'felixgoff/mac-wallpapers'], check=True)
             son[m, o] = MEDIA + name
@@ -336,7 +338,7 @@ for x in items:
 assert sum('workshop' in x for x in items) == len(WORKSHOP)
 
 # Self-check: everything must work from a public web page
-VERSIONS = {'27', '26', '15', '14', '13', '12', '11', '9', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
+VERSIONS = {'27', '26', '15', '14', '13', '12', '11', '9', '8.5', '8', '7.5', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
 for x in items:
     assert x['v'] in VERSIONS, x
     assert x['url'].startswith('https://') or x['kind'] in ('builtin', 'set'), x

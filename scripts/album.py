@@ -69,7 +69,7 @@ def norm(s):
 VNAME = {'14': 'Sonoma', '13': 'Ventura', '12': 'Monterey', '11': 'Big Sur', '10.15': 'Catalina', '10.14': 'Mojave',
          '10.13': 'High Sierra', '10.12': 'Sierra', '10.11': 'El Capitan', '10.10': 'Yosemite', '10.9': 'Mavericks',
          '10.8': 'Mountain Lion', '10.7': 'Lion', '10.6': 'Snow Leopard', '10.5': 'Leopard', '10.4': 'Tiger',
-         '10.3': 'Panther', '10.2': 'Jaguar', '10.0': 'Cheetah', '9': 'Mac OS 9', 'classic': 'Classic', 'other': 'Other'}
+         '10.3': 'Panther', '10.2': 'Jaguar', '10.0': 'Cheetah', '9': 'Mac OS 9', '8.5': 'Mac OS 8.5–9', '8': 'Mac OS 8', '7.5': 'System 7.5', 'classic': 'Classic', 'other': 'Other'}
 
 
 def version(k, t):
@@ -122,10 +122,14 @@ def entries(existing):
             frames.setdefault('variant:' + norm(stem.replace('-', ' ')), []).append(('Light (JPEG)', link))
             continue
 
-        name = clean(stem, pattern)
-        if pattern and re.fullmatch(r'\d+', stem):  # classic Mac OS desktop patterns are just numbered files
-            npat = sum(1 for e in out if e.get('pattern') and e['v'] == 'classic') + 1
-            name = f'Pattern {npat}'
+        name, pv = clean(stem, pattern), None
+        if pattern and re.fullmatch(r'\d+', stem):
+            # Classic desktop patterns are named by their resource ID, which tells the release that shipped them:
+            # System 7.5's are below 1969, Mac OS 8's 1969–1978, the Appearance Manager's (Mac OS 8.5–9) from 2767
+            rid = int(stem)
+            pv = '7.5' if rid < 1969 else '8' if rid <= 1978 else '8.5'
+            npat = sum(1 for e in out if e.get('pattern') and e['v'] == pv) + 1
+            name = f'{VNAME[pv]} Pattern {npat}'
         key = norm(name)
         ex = by_name.get(key)
         if ex and (ex['c'] != 'colors' or pattern):
@@ -135,7 +139,7 @@ def entries(existing):
         if key in by_new and (by_new[key]['w'], by_new[key]['h']) == (w, h):  # same picture, another format
             attach(by_new[key], ext[1:].upper() + ' version', link)
             continue
-        v = version(k, meta['t'])
+        v = pv or version(k, meta['t'])
         if key in by_new:  # same name in another release, e.g. Abstract 1 in Leopard and Mojave
             name = f'{name} ({VNAME[v]})'
             key = norm(name)
