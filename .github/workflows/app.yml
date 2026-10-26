@@ -4,7 +4,6 @@ name: Build the desktop app
 on:
   push:
     tags: ['app-v*']
-    branches: [tauri-app] # temporary: workflow_dispatch only works once this file is on main
   workflow_dispatch:
 
 permissions:
