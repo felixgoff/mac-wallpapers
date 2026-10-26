@@ -6,12 +6,19 @@
     "dev": "vite",
     "build": "vite build && node scripts/share-pages.js",
     "preview": "vite preview",
-    "test": "node --test src/lib/*.test.js"
+    "test": "node --test src/lib/*.test.js",
+    "tauri": "tauri",
+    "icons": "tauri icon public/icon.png"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tauri-apps/cli": "^2.12.4",
     "libheif-js": "^1.23.5",
     "svelte": "^5.57.2",
     "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-opener": "^2.7.2"
   }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "mac-wallpapers"
+version = "1.0.0"
+description = "Every Mac wallpaper in one place, as a desktop app"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+ureq = "3"
+wallpaper = "3"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"

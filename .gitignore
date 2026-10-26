@@ -5,3 +5,7 @@ __pycache__/
 .DS_Store
 .impeccable/config.local.json
 .impeccable/hook.cache.json
+# Tauri: build output, and icons made from public/icon.png by `npm run icons`
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/
