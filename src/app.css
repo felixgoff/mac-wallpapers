@@ -289,3 +289,22 @@ body {
 .act-x svg { width: 12px; height: 12px; }
 @media (max-width: 640px) { .activity { right: 16px; bottom: 72px; } }
 @media (prefers-reduced-motion: reduce) { .act { animation: none; } .act-bar.indeterminate i { animation: none; width: 100%; opacity: .5; } }
+
+/* The desktop app (src-tauri): the page is the real window, so it fills it and the system draws its edge and shadow.
+   On a Mac and Windows the sidebar is the window's own material (vibrancy, Mica); Linux has none, so it's solid there. */
+html.app body { background: transparent; padding: 0; }
+html.app .window { width: 100%; height: 100%; border-radius: 0; box-shadow: none; animation: none; background: transparent; }
+html.app .content { background: var(--window); }
+html.app-mac .sidebar, html.app-win .sidebar { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+html.app-linux { --sidebar: #ececf0; }
+@media (prefers-color-scheme: dark) { html.app-linux { --sidebar: #2a2a2c; } }
+html.app-linux .window { border-radius: 12px; }
+/* the system's traffic lights sit at the top left on a Mac */
+html.app-mac .lights > * { visibility: hidden; }
+html.app-mac.preview .ql-bar { height: 52px; padding-left: 20px; }
+
+/* The app's Quick Look window: the panel is the window */
+html.preview .ql { padding: 0; }
+html.preview .ql-panel { display: flex; flex-direction: column; width: 100%; height: 100%; border-radius: 0; box-shadow: none; transition: none; }
+html.app-linux.preview .ql-panel { border-radius: 12px; background: var(--window); }
+html.preview .ql-img { flex: 1; aspect-ratio: auto; }

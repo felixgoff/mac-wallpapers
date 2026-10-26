@@ -8,7 +8,8 @@ import { mb } from './versions.js';
 let libheif;
 const aborted = () => new DOMException('Cancelled', 'AbortError');
 
-async function heicFile(d, job) {
+// Apple's original HEIC file of the wallpaper, as a Blob (out of the zip, for Apple's catalog)
+export async function heicFile(d, job) {
   const res = await fetch(fetchable(d.url), { signal: job.ctrl.signal });
   if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
   const total = +res.headers.get('content-length') || d.size || 0, reader = res.body.getReader(), chunks = [];
@@ -25,6 +26,7 @@ async function heicFile(d, job) {
       job.p = total ? (got / total) * 0.6 : null; // downloading is most of the wait
     }
   }
+  if (d.how !== 'zip') return new Blob(chunks);
   job.step = 'Unzipping';
   return unzipFile(await new Blob(chunks).arrayBuffer(), n => n.toLowerCase().endsWith('.heic'));
 }
@@ -82,6 +84,13 @@ export async function heicPicture(d, job) {
   const [img] = await decode(heic, job, 1);
   job.step = 'Preparing the picture';
   return URL.createObjectURL(await toJpeg(img));
+}
+
+// The picture Quick Look shows, as a JPEG: for desktops that can't use HEIC
+export async function heicJpeg(d, job) {
+  const [img] = await decode(await heicFile(d, job), job, 1);
+  job.step = 'Converting to JPEG';
+  return toJpeg(img);
 }
 
 // Every image in the HEIC as a JPEG, brightest (day) first

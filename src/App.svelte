@@ -7,6 +7,9 @@
   import Activity from './lib/Activity.svelte';
   import Tile from './lib/Tile.svelte';
   import QuickLook from './lib/QuickLook.svelte';
+  import { APP, PLATFORM } from './lib/desktop.js';
+  import { invoke } from '@tauri-apps/api/core';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
 
   let cat = $state('all'), q = $state(''), selected = $state(null), qlOpen = $state(false), scrolled = $state(false);
   let sortBy = $state(savedSort());
@@ -76,6 +79,10 @@
   }
   async function openQL(i) {
     selected = i;
+    if (APP) { // Quick Look gets its own window (Preview.svelte), stepping through what's on screen here
+      try { localStorage.setItem('previewList', JSON.stringify(visible.map(d => d.i))); } catch {}
+      return invoke('open_preview', { id: items[i].id });
+    }
     qlOpen = true;
     await tick();
     requestAnimationFrame(() => ql.flyIn(tileEl(i)?.querySelector('.frame')));
@@ -129,10 +136,19 @@
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">{@html ICONS[name] ?? ICONS.all}</svg>
 {/snippet}
 
-<div class="desktop"></div>
+{#if !APP}<div class="desktop"></div>{/if}
 <div class="window">
   <nav class="sidebar" aria-label="Categories">
-    <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <!-- in the app on Windows and Linux these work the real window; on a Mac the system's own lights sit here -->
+    {#if APP && PLATFORM !== 'mac'}
+      <div class="lights" data-tauri-drag-region="deep">
+        <button aria-label="Close" onclick={() => getCurrentWindow().close()}></button>
+        <button aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}></button>
+        <button aria-label="Zoom" onclick={() => getCurrentWindow().toggleMaximize()}></button>
+      </div>
+    {:else}
+      <div class="lights" aria-hidden="true" data-tauri-drag-region="deep"><i></i><i></i><i></i></div>
+    {/if}
     <div class="pill" class:instant={!animated} style={pill}></div>
     <button class="item" bind:this={navButtons.all} aria-current={cat === 'all'} onclick={() => pick('all')}>
       {@render icon('all')}All Wallpapers<span class="ct">{items.length}</span>
@@ -146,7 +162,7 @@
   </nav>
 
   <main class="content">
-    <div class="toolbar" class:scrolled>
+    <div class="toolbar" class:scrolled data-tauri-drag-region="deep">
       {#key title + sortBy}
         <div class="heading swap">
           <div class="t">{title}</div>
@@ -191,8 +207,10 @@
   </main>
 </div>
 
-<QuickLook bind:this={ql} d={selected == null ? null : items[selected]} open={qlOpen} list={visible}
-  onselect={i => select(i, true)} onclose={closeQL} />
+{#if !APP}
+  <QuickLook bind:this={ql} d={selected == null ? null : items[selected]} open={qlOpen} list={visible}
+    onselect={i => select(i, true)} onclose={closeQL} />
+{/if}
 
 <div class="toast" class:show={toast.show} role="status" aria-live="polite">{toast.msg}</div>
 <Activity />

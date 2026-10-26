@@ -3,7 +3,10 @@ import { mb } from './versions.js';
 import { crc32, zip } from './zip.js';
 import { packageFiles, videoName } from './wallpaperEngine.js';
 import { fetchable } from './proxy.js';
-import { heicPicture, heicFrames } from './heic.js';
+import { heicPicture, heicFrames, heicFile, heicJpeg } from './heic.js';
+import { invoke, Channel } from '@tauri-apps/api/core';
+import { APP, PLATFORM } from './desktop.js';
+import { wallpaperSource } from './wallpaper.js';
 
 export const toast = $state({ msg: '', show: false });
 let timer;
@@ -72,6 +75,48 @@ async function download(d) {
     fetchBroken = true;
     say(`This browser can’t download it here — click again to open the ${d.kind === 'aerial' ? 'video' : 'file'} instead`, 5000);
   }
+}
+
+// In the desktop app the Rust side (src-tauri) downloads straight from the servers, no proxy or zip, into real folders.
+// files(job) gives [{ name, url } | { name, data: Blob | Uint8Array | string }]; size is the expected total, for progress.
+// Resolves to { path, installed }, or null when it failed or was cancelled (the toast says so).
+async function appSave(key, title, dest, folder, files, size = 0) {
+  const cur = jobs.get(key);
+  if (cur?.state === 'loading') return void cur.ctrl.abort();
+  const j = newJob(key, title, 'Starting', size ? 0 : null, size);
+  const job = `${key}#${Date.now()}`;
+  j.ctrl.signal.addEventListener('abort', () => invoke('cancel', { job }));
+  try {
+    const specs = [];
+    for (const f of await files(j)) {
+      if (f.url) { specs.push({ name: f.name, url: f.url }); continue; }
+      const bytes = typeof f.data === 'string' ? new TextEncoder().encode(f.data)
+        : f.data instanceof Blob ? new Uint8Array(await f.data.arrayBuffer()) : f.data;
+      specs.push({ name: f.name, staged: await invoke('stage', bytes) });
+    }
+    j.ctrl.signal.throwIfAborted(); // cancelled while staging: Rust hasn't heard of the job yet
+    const got = [], onProgress = new Channel();
+    onProgress.onmessage = m => {
+      got[m.file] = m.got;
+      const sum = got.reduce((a, b) => a + (b ?? 0), 0);
+      j.p = size ? Math.min(sum / size, 0.99) : m.total ? m.got / m.total : null;
+      j.step = `Downloading${m.files > 1 ? ` file ${m.file + 1} of ${m.files}` : ''} — ${mb(sum)}${size ? ` of ${mb(size)}` : m.total ? ` of ${mb(m.total)}` : ''}`;
+    };
+    j.step = 'Saving';
+    const saved = await invoke('save', { job, dest, folder, files: specs, onProgress });
+    Object.assign(j, { state: 'done', p: 1 });
+    setTimeout(() => jobs.get(key) === j && jobs.delete(key), 2200);
+    return saved;
+  } catch (err) {
+    jobs.delete(key);
+    say(j.ctrl.signal.aborted ? `Stopped ${title}` : `Couldn’t save ${title} — ${err?.message ?? err}`, 7000);
+    return null;
+  }
+}
+
+async function appDownload(key, title, folder, files, size) {
+  const saved = await appSave(key, title, 'downloads', folder, async () => files, size);
+  if (saved) say(`Saved to ${saved.path}`, 5000);
 }
 
 const imageName = part => `${part.t.toLowerCase()}.jpg`;
@@ -143,17 +188,39 @@ async function buildPackage(d, mode) {
   }
 }
 
+// The app puts the package straight into Wallpaper Engine's projects folder (Downloads when it isn't installed)
+async function installWallpaperEngine(d) {
+  const saved = await appSave(weKey(d), `“${d.n}” for Wallpaper Engine`, 'wallpaper-engine', d.n, async j => {
+    const preview = new Uint8Array(await (await fetch(d.img)).arrayBuffer());
+    const media = d.we.heic ? (await heicFrames(d, j)).slice(0, d.we.parts.length).map((data, k) => ({ name: imageName(d.we.parts[k]), data }))
+      : d.we.video ? d.we.parts.map(p => ({ name: videoName(p), url: p.u })) : [];
+    const pkg = d.we.heic ? { ...d, we: { ...d.we, parts: d.we.parts.map(p => ({ ...p, u: imageName(p) })) } } : d;
+    // the package's own folder is `folder` here
+    return [...packageFiles(pkg, [], preview).map(f => ({ name: f.name.split('/').pop(), data: f.data })), ...media];
+  }, d.we.video ? d.size : 0);
+  if (saved) say(saved.installed ? `Installed “${d.n}” in Wallpaper Engine` : `Saved to ${saved.path} — see the README inside to add it`, 6000);
+}
+
 export function onWallpaperEngine(e, d) {
   e.preventDefault();
-  buildPackage(d, 'we');
+  if (APP) installWallpaperEngine(d);
+  else buildPackage(d, 'we');
 }
 
 export function onPortrait(e, d) {
   e.preventDefault();
-  buildPackage(d, 'portrait');
+  if (APP) appDownload(portraitKey(d), `“${d.n}” portrait videos`, `${d.n} (portrait videos)`,
+    d.portrait.parts.map(p => ({ name: videoName(p), url: p.u })), d.portrait.size);
+  else buildPackage(d, 'portrait');
 }
 
 export function onDownloadClick(e, d) {
+  if (APP) {
+    e.preventDefault();
+    if (d.kind === 'set') return appDownload(d.i, `“${d.n}” videos`, d.n, d.we.parts.map(p => ({ name: videoName(p), url: p.u })), d.size);
+    // a name without an extension gets one from the server's Content-Type
+    return appDownload(d.i, `“${d.n}”`, null, [{ name: fileName(d.n, d.ext || (d.how === 'zip' ? '.zip' : '')), url: d.url }], d.size);
+  }
   if (d.kind === 'set') {
     e.preventDefault();
     return buildPackage(d, 'videos');
@@ -171,9 +238,13 @@ export function onDownloadClick(e, d) {
 
 // Extra versions (iPad, iPhone, frames…) of a wallpaper
 export async function onAltClick(e, d, alt) {
+  const ext = (alt.u.match(/\.\w+(?=$|\?)/) || [d.ext || ''])[0];
+  if (APP) {
+    e.preventDefault();
+    return appDownload(`${d.i}:${alt.l}`, `“${d.n}” (${alt.l})`, null, [{ name: fileName(`${d.n} (${alt.l})`, ext), url: alt.u }], alt.size);
+  }
   if (d.how !== 'fetch' || fetchBroken) return say(`Downloading “${d.n}” — ${alt.l}`);
   e.preventDefault();
-  const ext = (alt.u.match(/\.\w+(?=$|\?)/) || [d.ext || ''])[0];
   try {
     say(`Downloading “${d.n}” — ${alt.l}${alt.size ? ` (${mb(alt.size)})` : ''}…`, 60000);
     const res = await fetch(alt.u);
@@ -183,6 +254,23 @@ export async function onAltClick(e, d, alt) {
   } catch {
     fetchBroken = true;
     say('This browser can’t download it here — click again to open the file instead', 5000);
+  }
+}
+
+// The app only: saves the picture into the app's wallpapers folder and makes it the desktop picture
+export const wallpaperKey = d => `${d.i}:wallpaper`;
+export async function setWallpaper(d) {
+  const src = wallpaperSource(d, PLATFORM === 'mac');
+  const saved = await appSave(wallpaperKey(d), `“${d.n}” for your desktop`, 'wallpapers', null, async j =>
+    src === 'heic' ? [{ name: fileName(d.n, '.heic'), data: await heicFile(d, j) }]
+    : src === 'jpeg' ? [{ name: fileName(d.n, '.jpg'), data: await heicJpeg(d, j) }]
+    : [{ name: fileName(d.n, src.match(/\.(jpe?g|png|heic)$/i)?.[0] ?? ''), url: src }]);
+  if (!saved) return;
+  try {
+    await invoke('set_wallpaper', { path: saved.path });
+    say(`“${d.n}” is now your wallpaper`);
+  } catch (err) {
+    say(`Couldn’t set the wallpaper — ${err}`, 7000);
   }
 }
 

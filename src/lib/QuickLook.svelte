@@ -1,9 +1,11 @@
 <script>
-  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say, fullPicture, fullKey } from './downloads.svelte.js';
+  import { jobs, onDownloadClick, onAltClick, onWallpaperEngine, onPortrait, weKey, portraitKey, say, fullPicture, fullKey,
+    setWallpaper, wallpaperKey } from './downloads.svelte.js';
   import { playable } from './proxy.js';
   import { VLABEL, section, patSize, mb } from './versions.js';
   import { catName } from './data.js';
-  import { ARROW, WE_ICON, PORTRAIT, WORKSHOP, LINK } from './icons.js';
+  import { ARROW, WE_ICON, PORTRAIT, WORKSHOP, LINK, ICONS } from './icons.js';
+  import { APP, SITE } from './desktop.js';
 
   let { d, open, list, onselect, onclose } = $props();
   let stage = $state(), video = $state();
@@ -21,11 +23,14 @@
     : ptJob?.state === 'done' ? 'Saved' : 'Portrait');
   const weLabel = $derived(weJob?.state === 'loading' ? `Building ${Math.round((weJob.p ?? 0) * 100)}%`
     : weJob?.state === 'done' ? 'Saved' : 'Wallpaper Engine');
+  const wpJob = $derived(d && jobs.get(wallpaperKey(d)));
+  const wpLabel = $derived(wpJob?.state === 'loading' ? (wpJob.p == null ? 'Setting…' : `Setting ${Math.round(wpJob.p * 100)}%`)
+    : wpJob?.state === 'done' ? 'Set' : 'Set as Wallpaper');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   async function copyLink() {
     // w/<id>/ is a page made at build time with the wallpaper's preview for chats (scripts/share-pages.js)
-    const url = location.origin + location.pathname + (import.meta.env.DEV ? '#' + d.id : `w/${d.id}/`);
+    const url = (APP ? SITE : location.origin + location.pathname) + (import.meta.env.DEV && !APP ? '#' + d.id : `w/${d.id}/`);
     try { await navigator.clipboard.writeText(url); say(`Copied a link to “${d.n}”`); }
     catch { prompt('Copy this link:', url); } // clipboard can be blocked (e.g. insecure contexts)
   }
@@ -91,7 +96,7 @@
 <div class="ql" class:open aria-hidden={!open} inert={!open} role="presentation" onclick={e => e.target === e.currentTarget && onclose()}>
   <div class="ql-panel" role="dialog" aria-modal="true" aria-labelledby="ql-title">
     {#if d}
-      <div class="ql-bar">
+      <div class="ql-bar" data-tauri-drag-region="deep">
         <div class="lights"><button title="Close" aria-label="Close" onclick={onclose}></button><i></i><i></i></div>
         <div class="ql-title" id="ql-title">
           {d.n}<small>{VLABEL[d.v]} · {sec && sec !== catName(d.c) ? sec + ' · ' : ''}{catName(d.c)} · {what}{d.size ? ' · ' + mb(d.size) : ''}</small>
@@ -100,6 +105,13 @@
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html LINK}</svg>
           <span>Copy Link</span>
         </button>
+        {#if APP && d.kind === 'still' && !d.pattern}
+          <button class="btn alt-btn" style:--p={wpJob?.p ?? 0} onclick={() => setWallpaper(d)} title="Make it your desktop picture">
+            <span class="fill"></span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">{@html ICONS['Desktop Pictures']}</svg>
+            <span>{wpLabel}</span>
+          </button>
+        {/if}
         {#if d.portrait}
           <a class="btn alt-btn" href="#portrait" style:--p={ptJob?.p ?? 0} onclick={e => onPortrait(e, d)}
             title="The light and dark videos for portrait screens">

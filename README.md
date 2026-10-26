@@ -40,6 +40,26 @@ The repo holds no full-size images or videos: macOS Sonoma's videos, which Apple
 on the [media release](https://github.com/felixgoff/mac-wallpapers/releases/tag/media) (`build_data.py` uploads
 them the first time).
 
+## App
+
+`src-tauri/` wraps the same page in a [Tauri](https://tauri.app) desktop app for macOS, Windows and Linux. The real
+window is the Finder window: on a Mac it has the system's traffic lights and sidebar material; on Windows and Linux
+it's frameless and the page's traffic lights close, minimize and zoom it. Quick Look opens in a second window. The app
+downloads straight from Apple's and the other servers (no proxy) into Downloads, installs Wallpaper Engine packages
+straight into Wallpaper Engine (Windows; elsewhere the package folder goes to Downloads), and **Set as Wallpaper**
+makes a picture the desktop picture (on a Mac Apple's own HEIC, so dynamic ones keep following the time of day).
+
+```sh
+npm run icons       # Tauri's icons from public/icon.png, into src-tauri/icons/ (not committed)
+npm run tauri dev   # the app, with the page hot-reloading
+npm run tauri build # installers in src-tauri/target/release/bundle/
+```
+
+`.github/workflows/app.yml` builds the installers on macOS (universal), Windows and Linux: pushing a tag like
+`app-v1.0.0` publishes them as a GitHub Release, a manual run keeps them as workflow artifacts. The builds aren't
+signed, so the first time macOS's Gatekeeper refuses the app (right-click it › Open, or System Settings › Privacy &
+Security › Open Anyway) and Windows SmartScreen warns (More info › Run anyway).
+
 ## Develop
 
 ```sh
