@@ -336,7 +336,7 @@ for x in items:
 assert sum('workshop' in x for x in items) == len(WORKSHOP)
 
 # Self-check: everything must work from a public web page
-VERSIONS = {'27', '26', '15', '14', '13', '12', '11', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
+VERSIONS = {'27', '26', '15', '14', '13', '12', '11', '9', 'other', 'classic'} | {f'10.{n}' for n in range(16)}
 for x in items:
     assert x['v'] in VERSIONS, x
     assert x['url'].startswith('https://') or x['kind'] in ('builtin', 'set'), x

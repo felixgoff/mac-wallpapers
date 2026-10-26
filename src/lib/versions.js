@@ -7,7 +7,7 @@ export const VERSIONS = [
   ['10.10', 'OS X Yosemite', '10.10'], ['10.9', 'OS X Mavericks', '10.9'], ['10.8', 'OS X Mountain Lion', '10.8'],
   ['10.7', 'Mac OS X Lion', '10.7'], ['10.6', 'Mac OS X Snow Leopard', '10.6'], ['10.5', 'Mac OS X Leopard', '10.5'],
   ['10.4', 'Mac OS X Tiger', '10.4'], ['10.3', 'Mac OS X Panther', '10.3'], ['10.2', 'Mac OS X Jaguar', '10.2'],
-  ['10.0', 'Mac OS X Cheetah & Puma', '10.0–10.1'], ['classic', 'Classic Mac OS', ''], ['other', 'Other', ''],
+  ['10.0', 'Mac OS X Cheetah & Puma', '10.0–10.1'], ['9', 'Mac OS 9', ''], ['classic', 'Classic Mac OS', ''], ['other', 'Other', ''],
 ];
 export const VLABEL = Object.fromEntries(VERSIONS.map(([k, n, num]) => [k, num ? `${n} ${num}` : n]));
 export const VSHORT = Object.fromEntries(VERSIONS.map(([k, n]) => [k, n.replace(/^(macOS|OS X|Mac OS X) /, '')]));
