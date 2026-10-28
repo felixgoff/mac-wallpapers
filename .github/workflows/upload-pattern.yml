@@ -1,0 +1,28 @@
+name: Upload Mac OS Default pattern (one-off)
+on:
+  push:
+    branches: [upload-mac-os-default]
+permissions:
+  contents: write
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get install -y -o Acquire::http::Timeout=15 -o Acquire::Retries=5 unar
+      - name: Download Mac OS 9.2.2's Theme Files from Macintosh Repository
+        run: |
+          curl -sSL -A Mozilla/5.0 -c cj -b cj -o page.html 'https://www.macintoshrepository.org/download.php?id=15714'
+          d=$(grep -oE 'name="d" value="[^"]+"' page.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl -sSL -A Mozilla/5.0 -c cj -b cj -e 'https://www.macintoshrepository.org/download.php?id=15714' \
+            --data-urlencode "d=$d" -d via_http=1 -o Theme_Files.sit 'https://www.macintoshrepository.org/download.php?u=0&id=15714&go=1'
+          echo 'df0b2c3043ba98dcce87b7c9d08d87cdcd6a7f17  Theme_Files.sit' | sha1sum -c
+          unar -q -o scripts/cache Theme_Files.sit
+      - name: Extract the pattern and upload it to the media release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd scripts && python3 -c "import themes; themes.pattern('Mac OS Default', 'cache/mac-os-default.png')"
+          ls -l cache/mac-os-default.png && sha256sum cache/mac-os-default.png
+          echo '02fd5654eeab09c12aafe5771d0248cd43122a411a5325e6656ebdbf0d5aac60  cache/mac-os-default.png' | sha256sum -c
+          gh release upload media cache/mac-os-default.png -R ${{ github.repository }}
